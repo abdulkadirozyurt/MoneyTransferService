@@ -28,6 +28,10 @@ public class TransferConfiguration : IEntityTypeConfiguration<Transfer>
             .HasIndex(t => t.IdempotencyKey)
             .IsUnique();
 
+        builder.Property(t => t.IdempotencyKey)
+            .IsRequired()
+            .HasMaxLength(100);
+
         builder
             .Property(t => t.Status)
             .IsRequired()

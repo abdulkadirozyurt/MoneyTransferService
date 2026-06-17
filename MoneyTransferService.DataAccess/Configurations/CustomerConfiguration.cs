@@ -10,5 +10,15 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         // inheritance strategy configuration
         builder.UseTpcMappingStrategy();
+
+        builder
+            .Property(c => c.Email)
+            .IsRequired()
+            .HasMaxLength(254);
+
+        builder
+            .Property(c => c.PhoneNumber)
+            .IsRequired()
+            .HasMaxLength(20);
     }
 }

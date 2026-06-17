@@ -39,5 +39,21 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .IsRequired()
             .HasMaxLength(20);
 
+        builder
+            .Property(t => t.AccountNumber)
+            .IsRequired()
+            .HasMaxLength(34);
+
+        builder
+            .HasIndex(t => t.AccountNumber)
+            .IsUnique();
+
+        builder
+            .Property(a => a.CurrencyCode)
+            .IsRequired()
+            .HasMaxLength(3);
+
+
+
     }
 }
