@@ -18,8 +18,8 @@ public sealed class Transfer : Entity
     public DateTime? CompletedAt { get; set; }
 
     public Guid SenderAccountId { get; set; }
-    public Account SenderAccount { get; set; }
+    public Account SenderAccount { get; set; }= null!;
 
     public Guid ReceiverAccountId { get; set; }
-    public Account ReceiverAccount { get; set; }
+    public Account ReceiverAccount { get; set; }=null!;
 }
