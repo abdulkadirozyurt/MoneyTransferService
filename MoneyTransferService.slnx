@@ -1,7 +1,10 @@
 <Solution>
-  <Project Path="MoneyTransferService.Business/MoneyTransferService.Business.csproj" />
-  <Project Path="MoneyTransferService.Core/MoneyTransferService.Core.csproj" />
-  <Project Path="MoneyTransferService.DataAccess/MoneyTransferService.DataAccess.csproj" />
-  <Project Path="MoneyTransferService.Entities/MoneyTransferService.Entities.csproj" />
-  <Project Path="MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/MoneyTransferService.Business/MoneyTransferService.Business.csproj" />
+    <Project Path="src/MoneyTransferService.Core/MoneyTransferService.Core.csproj" />
+    <Project Path="src/MoneyTransferService.DataAccess/MoneyTransferService.DataAccess.csproj" />
+    <Project Path="src/MoneyTransferService.Entities/MoneyTransferService.Entities.csproj" />
+    <Project Path="src/MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
 </Solution>
