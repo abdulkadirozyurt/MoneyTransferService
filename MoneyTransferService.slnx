@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="MoneyTransferService.Core/MoneyTransferService.Core.csproj" />
+  <Project Path="MoneyTransferService.Entities/MoneyTransferService.Entities.csproj" Id="7735014f-5327-4f39-a722-bf6ce9b70dc9" />
   <Project Path="MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj" />
 </Solution>
