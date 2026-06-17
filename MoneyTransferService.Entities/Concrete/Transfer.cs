@@ -1,5 +1,5 @@
 using MoneyTransferService.Core.Entities.Concrete;
-using MoneyTransferService.Core.Enums;
+using MoneyTransferService.Core.Constants;
 
 namespace MoneyTransferService.Entities.Concrete;
 
@@ -7,7 +7,7 @@ public sealed class Transfer : Entity
 {
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = default!;
-    public TransferStatus Status { get; set; } = TransferStatus.Pending;
+    public string Status { get; set; } = TransferStatus.PENDING;
     public string? Description { get; set; }
 
     // prevents duplicate transfer requests in case of network issues or retries
@@ -18,8 +18,8 @@ public sealed class Transfer : Entity
     public DateTime? CompletedAt { get; set; }
 
     public Guid SenderAccountId { get; set; }
-    public Account SenderAccount { get; set; }= null!;
+    public Account SenderAccount { get; set; } = null!;
 
     public Guid ReceiverAccountId { get; set; }
-    public Account ReceiverAccount { get; set; }=null!;
+    public Account ReceiverAccount { get; set; } = null!;
 }
