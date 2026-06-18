@@ -5,22 +5,48 @@ services:
       dockerfile: Dockerfile
     container_name: money-transfer-api
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:8080"
+    environment:
+      - ConnectionStrings__SqlServer=${SQLSERVER_CONNECTION_STRING}
+      - ConnectionStrings__MongoDb=${MONGODB_CONNECTION_STRING}
     depends_on:
-      - sqlserver
-      - mongodb
+      sqlserver:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      migrator:
+        condition: service_completed_successfully
     networks:
       - money-transfer-network
-    
-  
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: money-transfer-api-migrator
+    environment:
+      - ConnectionStrings__SqlServer=${SQLSERVER_CONNECTION_STRING}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - money-transfer-network
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:latest
     container_name: money-transfer-sqlserver
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "YourStrong!Passw0rd"
+      SA_PASSWORD: "${SQLSERVER_PASSWORD}"
     ports:
-      - "1433:1433"
+      - "${SQLSERVER_PORT:-1433}:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -C -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q \"SELECT 1\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - money-transfer-network
     volumes:
@@ -30,7 +56,7 @@ services:
     image: mongo:latest
     container_name: money-transfer-mongodb
     ports:
-      - "27017:27017"
+      - "${MONGODB_PORT:-27017}:27017"
     networks:
       - money-transfer-network
     volumes:

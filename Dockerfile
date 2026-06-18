@@ -19,6 +19,22 @@ RUN dotnet publish "src/MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.
     -o /app/publish \
     --no-restore
 
+# Stage to build migration bundle
+FROM build AS migrator-build
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+RUN dotnet ef migrations bundle \
+    --project src/MoneyTransferService.DataAccess/MoneyTransferService.DataAccess.csproj \
+    --startup-project src/MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj \
+    -o /app/efbundle
+
+# Final migrator runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS migrator
+WORKDIR /app
+COPY --from=migrator-build /app/efbundle .
+ENTRYPOINT ["./efbundle"]
+
+# Final WebAPI runtime stage (keep it at the end to be the default target)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
