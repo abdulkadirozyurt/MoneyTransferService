@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MoneyTransferService.Core\MoneyTransferService.Core.csproj" />
     <ProjectReference Include="..\MoneyTransferService.Entities\MoneyTransferService.Entities.csproj" />
   </ItemGroup>
 
