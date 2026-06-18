@@ -39,7 +39,7 @@ public static class DataAccessRegistrar
             return mongoClient.GetDatabase(databaseName);
         });
 
-        services.AddScoped<ITransferAuditService, TransferAuditService>();
+        services.AddScoped<ITransferAuditRepository, TransferAuditRepository>();
 
         return services;
     }

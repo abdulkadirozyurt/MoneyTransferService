@@ -6,13 +6,13 @@ using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Tests.Concrete;
 
-public class TransferAuditServiceTests
+public class TransferAuditRepositoryTests
 {
     private readonly Mock<IMongoDatabase> _databaseMock;
     private readonly Mock<IMongoCollection<TransferAuditLog>> _collectionMock;
-    private readonly TransferAuditService _transferAuditService;
+    private readonly TransferAuditRepository _transferAuditRepository;
 
-    public TransferAuditServiceTests()
+    public TransferAuditRepositoryTests()
     {
         _databaseMock = new Mock<IMongoDatabase>();
         _collectionMock = new Mock<IMongoCollection<TransferAuditLog>>();
@@ -21,7 +21,7 @@ public class TransferAuditServiceTests
             .Setup(db => db.GetCollection<TransferAuditLog>(It.IsAny<string>(), It.IsAny<MongoCollectionSettings>()))
             .Returns(_collectionMock.Object);
 
-        _transferAuditService = new TransferAuditService(_databaseMock.Object);
+        _transferAuditRepository = new TransferAuditRepository(_databaseMock.Object);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class TransferAuditServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _transferAuditService.LogTransferAsync(transfer, eventType, failureReason);
+        await _transferAuditRepository.LogTransferAsync(transfer, eventType, failureReason);
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
@@ -81,7 +81,7 @@ public class TransferAuditServiceTests
         capturedLog.Amount.Should().Be(transfer.Amount);
         capturedLog.CurrencyCode.Should().Be(transfer.CurrencyCode);
         capturedLog.FailureReason.Should().Be(failureReason);
-        capturedLog.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        capturedLog.Timestamp.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class TransferAuditServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _transferAuditService.LogTransferAsync(transfer, "Failed", "Parameter level error");
+        await _transferAuditRepository.LogTransferAsync(transfer, "Failed", "Parameter level error");
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
@@ -127,7 +127,7 @@ public class TransferAuditServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _transferAuditService.LogTransferAsync(transfer, "Failed", null);
+        await _transferAuditRepository.LogTransferAsync(transfer, "Failed", null);
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(

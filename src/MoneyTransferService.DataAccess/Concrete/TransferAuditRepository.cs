@@ -4,11 +4,11 @@ using MoneyTransferService.DataAccess.Abstract;
 
 namespace MoneyTransferService.DataAccess.Concrete;
 
-public class TransferAuditService : ITransferAuditService
+public class TransferAuditRepository : ITransferAuditRepository
 {
     private readonly IMongoCollection<TransferAuditLog> _collection;
 
-    public TransferAuditService(IMongoDatabase database)
+    public TransferAuditRepository(IMongoDatabase database)
     {
         _collection = database.GetCollection<TransferAuditLog>("TransferAuditLogs");
     }
@@ -27,7 +27,7 @@ public class TransferAuditService : ITransferAuditService
             Amount = transfer.Amount,
             CurrencyCode = transfer.CurrencyCode ?? string.Empty,
             FailureReason = failureReason ?? transfer.FailureReason,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTimeOffset.UtcNow
         };
 
         await _collection.InsertOneAsync(auditLog);

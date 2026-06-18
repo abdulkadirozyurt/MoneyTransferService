@@ -7,7 +7,7 @@ public sealed class TransferAuditLog
 {
     public TransferAuditLog()
     {
-        Timestamp = DateTime.UtcNow;
+        Timestamp = DateTimeOffset.UtcNow;
     }
 
     [BsonId]
@@ -19,5 +19,5 @@ public sealed class TransferAuditLog
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
     public string? FailureReason { get; set; }
-    public DateTime Timestamp { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
 }

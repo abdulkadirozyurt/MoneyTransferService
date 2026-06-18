@@ -15,7 +15,7 @@ public sealed class Transfer : Entity
     public string IdempotencyKey { get; set; } = string.Empty;
 
     public string? FailureReason { get; set; }
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 
     public Guid SenderAccountId { get; set; }
     public Account SenderAccount { get; set; } = null!;
