@@ -6,5 +6,7 @@
     <Project Path="src/MoneyTransferService.Entities/MoneyTransferService.Entities.csproj" />
     <Project Path="src/MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj" />
   </Folder>
-  <Folder Name="/test/" />
+  <Folder Name="/test/">
+    <Project Path="test/MoneyTransferService.Business.Tests/MoneyTransferService.Business.Tests.csproj" />
+  </Folder>
 </Solution>

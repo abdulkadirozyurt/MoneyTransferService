@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
+using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Core.DataAccess.Abstract;
 using MoneyTransferService.DataAccess.Concrete;
 using MoneyTransferService.DataAccess.Context;
@@ -18,6 +20,26 @@ public static class DataAccessRegistrar
 
         services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        var connectionString = configuration.GetConnectionString("MongoDb");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            // Fallback default for safety
+            connectionString = "mongodb://mongodb:27017/MoneyTransferDb";
+        }
+
+        var mongoUrl = new MongoUrl(connectionString);
+        var databaseName = mongoUrl.DatabaseName ?? "MoneyTransferDb";
+
+        services.AddSingleton<IMongoClient>(sp => new MongoClient(connectionString));
+
+        services.AddScoped<IMongoDatabase>(sp =>
+        {
+            var mongoClient = sp.GetRequiredService<IMongoClient>();
+            return mongoClient.GetDatabase(databaseName);
+        });
+
+        services.AddScoped<ITransferAuditService, TransferAuditService>();
 
         return services;
     }

@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MoneyTransferService.DataAccess\MoneyTransferService.DataAccess.csproj" />
+    <ProjectReference Include="..\MoneyTransferService.Business\MoneyTransferService.Business.csproj" />
   </ItemGroup>
 
 </Project>

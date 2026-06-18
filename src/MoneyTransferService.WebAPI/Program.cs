@@ -1,9 +1,11 @@
+using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.RegisterDataAccessServices(builder.Configuration);
+builder.Services.RegisterBusinessServices(builder.Configuration);
 
 builder.Services.AddOpenApi();
 
