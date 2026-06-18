@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Moq;
 using MongoDB.Driver;
+using MoneyTransferService.Core.Constants;
 using MoneyTransferService.DataAccess.Concrete;
 using MoneyTransferService.Entities.Concrete;
 
@@ -52,7 +53,7 @@ public class TransferAuditRepositoryTests
         };
         transfer.Id = Guid.NewGuid();
 
-        string eventType = "Completed";
+        string eventType = AuditEventType.COMPLETED;
         string? failureReason = "Specific failure reason";
 
         TransferAuditLog? capturedLog = null;
@@ -101,7 +102,7 @@ public class TransferAuditRepositoryTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _transferAuditRepository.LogTransferAsync(transfer, "Failed", "Parameter level error");
+        await _transferAuditRepository.LogTransferAsync(transfer, AuditEventType.FAILED, "Parameter level error");
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
@@ -127,7 +128,7 @@ public class TransferAuditRepositoryTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _transferAuditRepository.LogTransferAsync(transfer, "Failed", null);
+        await _transferAuditRepository.LogTransferAsync(transfer, AuditEventType.FAILED, null);
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(

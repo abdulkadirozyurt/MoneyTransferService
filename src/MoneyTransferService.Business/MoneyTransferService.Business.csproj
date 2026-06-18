@@ -7,11 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MoneyTransferService.DataAccess\MoneyTransferService.DataAccess.csproj" />
     <ProjectReference Include="..\MoneyTransferService.Entities\MoneyTransferService.Entities.csproj" />
     <ProjectReference Include="..\MoneyTransferService.Core\MoneyTransferService.Core.csproj" />
   </ItemGroup>
