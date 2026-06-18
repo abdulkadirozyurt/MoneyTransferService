@@ -8,6 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyTransferService.DataAccess\MoneyTransferService.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>

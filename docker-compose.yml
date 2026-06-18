@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: money-transfer-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - sqlserver
+      - mongodb
+    networks:
+      - money-transfer-network
+    
+  
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:latest
+    container_name: money-transfer-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"
+    networks:
+      - money-transfer-network
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+  
+  mongodb:
+    image: mongo:latest
+    container_name: money-transfer-mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - money-transfer-network
+    volumes:
+      - mongodb-data:/data/db
+
+networks:
+  money-transfer-network:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
+  mongodb-data:
