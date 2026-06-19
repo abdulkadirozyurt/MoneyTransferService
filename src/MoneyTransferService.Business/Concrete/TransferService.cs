@@ -34,71 +34,41 @@ public class TransferService(
             description
         );
 
-        var validationResult = await transferRequestValidator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            throw new ValidationException("Invalid transfer request.", validationResult.Errors);
-        }
+        await ValidateRequestAsync(request, cancellationToken);
 
         var transferRepository = unitOfWork.GetRepository<Transfer>();
-        var existingTransfers = await transferRepository.GetAllAsync(cancellationToken);
-        var existingTransfer = existingTransfers.FirstOrDefault(t => t.IdempotencyKey == idempotencyKey);
+        Transfer? existingTransfer = await GetExistingTransferAsync(request, transferRepository, cancellationToken);
         if (existingTransfer != null)
         {
             return existingTransfer;
         }
 
         var accountRepository = unitOfWork.GetRepository<Account>();
-        var senderAccount = transferBusinessRules.EnsureAccountExists(
-            await accountRepository.GetByIdAsync(senderAccountId, cancellationToken),
-            "Sender",
-            senderAccountId);
-        var receiverAccount = transferBusinessRules.EnsureAccountExists(
-            await accountRepository.GetByIdAsync(receiverAccountId, cancellationToken),
-            "Receiver",
-            receiverAccountId);
+        var transferAccounts = await GetTransferAccountsAsync(accountRepository, request, cancellationToken);
 
-        transferBusinessRules.EnsureAccountIsActive(senderAccount, "Sender");
-        transferBusinessRules.EnsureAccountIsActive(receiverAccount, "Receiver");
-        transferBusinessRules.EnsureCurrencyMatches(senderAccount, "Sender", currencyCode);
-        transferBusinessRules.EnsureCurrencyMatches(receiverAccount, "Receiver", currencyCode);
+        await EnsureTransferCanBeCompletedAsync(request, transferAccounts);
 
-        try
-        {
-            transferBusinessRules.EnsureSufficientFunds(senderAccount, amount);
-        }
-        catch (InsufficientFundsException ex)
-        {
-            var failedTransfer = CreateFailedTransfer(request, ex.Message, senderAccount, receiverAccount);
-            await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
-            throw;
-        }
-
-        var transfer = new Transfer
-        {
-            Amount = amount,
-            CurrencyCode = currencyCode,
-            SenderAccountId = senderAccountId,
-            SenderAccount = senderAccount,
-            ReceiverAccountId = receiverAccountId,
-            ReceiverAccount = receiverAccount,
-            IdempotencyKey = idempotencyKey,
-            Description = description,
-            Status = TransferStatus.PENDING
-        };
+        var transfer = CreatePendingTransfer(request, transferAccounts);
 
         await auditRepository.LogTransferAsync(transfer, AuditEventType.INITIATED);
 
-        senderAccount.Balance -= amount;
-        receiverAccount.Balance += amount;
+        ApplyTransferBalanceChanges(request, transferAccounts, accountRepository);
 
-        accountRepository.Update(senderAccount);
-        accountRepository.Update(receiverAccount);
+        await CompleteTransferAsync(transfer, transferRepository, cancellationToken);
 
-        transfer.Status = TransferStatus.COMPLETED;
-        transfer.CompletedAt = DateTimeOffset.UtcNow;
-        await transferRepository.AddAsync(transfer, cancellationToken);
+        await SaveTransferAsync(request, transferAccounts, transfer, cancellationToken);
 
+        await auditRepository.LogTransferAsync(transfer, AuditEventType.COMPLETED);
+
+        return transfer;
+    }
+
+    private async Task SaveTransferAsync(
+        TransferRequest request,
+        TransferAccounts transferAccounts,
+        Transfer transfer,
+        CancellationToken cancellationToken)
+    {
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -108,16 +78,107 @@ public class TransferService(
             var failedTransfer = CreateFailedTransfer(
                 request,
                 "Optimistic concurrency version conflict during save.",
-                senderAccount,
-                receiverAccount,
+                transferAccounts.SenderAccount,
+                transferAccounts.ReceiverAccount,
                 transfer.Id);
             await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
             throw new ConcurrencyException(failedTransfer.FailureReason!, ex);
         }
+    }
 
-        await auditRepository.LogTransferAsync(transfer, AuditEventType.COMPLETED);
+    private static async Task CompleteTransferAsync(Transfer transfer, IRepository<Transfer> transferRepository, CancellationToken cancellationToken)
+    {
+        transfer.Status = TransferStatus.COMPLETED;
+        transfer.CompletedAt = DateTimeOffset.UtcNow;
+        await transferRepository.AddAsync(transfer, cancellationToken);
+    }
 
-        return transfer;
+    private async Task EnsureTransferCanBeCompletedAsync(TransferRequest request, TransferAccounts transferAccounts)
+    {
+        transferBusinessRules.EnsureAccountIsActive(transferAccounts.SenderAccount, AccountRole.SENDER);
+        transferBusinessRules.EnsureAccountIsActive(transferAccounts.ReceiverAccount, AccountRole.RECEIVER);
+        transferBusinessRules.EnsureCurrencyMatches(transferAccounts.SenderAccount, AccountRole.SENDER, request.CurrencyCode);
+        transferBusinessRules.EnsureCurrencyMatches(transferAccounts.ReceiverAccount, AccountRole.RECEIVER, request.CurrencyCode);
+
+        try
+        {
+            transferBusinessRules.EnsureSufficientFunds(transferAccounts.SenderAccount, request.Amount);
+        }
+        catch (InsufficientFundsException ex)
+        {
+            var failedTransfer = CreateFailedTransfer(
+                request,
+                ex.Message,
+                transferAccounts.SenderAccount,
+                transferAccounts.ReceiverAccount);
+
+            await auditRepository.LogTransferAsync(
+                failedTransfer,
+                AuditEventType.FAILED,
+                failedTransfer.FailureReason);
+
+            throw;
+        }
+    }
+
+    private sealed record TransferAccounts(Account SenderAccount, Account ReceiverAccount);
+
+    private async Task<TransferAccounts> GetTransferAccountsAsync(IRepository<Account> accountRepository, TransferRequest request, CancellationToken cancellationToken)
+    {
+        var senderAccount = transferBusinessRules.EnsureAccountExists(
+            await accountRepository.GetByIdAsync(request.SenderAccountId, cancellationToken),
+            AccountRole.SENDER,
+            request.SenderAccountId);
+
+        var receiverAccount = transferBusinessRules.EnsureAccountExists(
+            await accountRepository.GetByIdAsync(request.ReceiverAccountId, cancellationToken),
+            AccountRole.RECEIVER,
+            request.ReceiverAccountId);
+
+        return new TransferAccounts(senderAccount, receiverAccount);
+    }
+
+    private static async Task<Transfer?> GetExistingTransferAsync(
+        TransferRequest request,
+        IRepository<Transfer> transferRepository,
+        CancellationToken cancellationToken)
+    {
+        var existingTransfers = await transferRepository.GetAllAsync(cancellationToken);
+        return existingTransfers.FirstOrDefault(t => t.IdempotencyKey == request.IdempotencyKey);
+    }
+
+    private async Task ValidateRequestAsync(TransferRequest request, CancellationToken cancellationToken)
+    {
+        var validationResult = await transferRequestValidator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationException("Invalid transfer request.", validationResult.Errors);
+        }
+    }
+
+    private static void ApplyTransferBalanceChanges(TransferRequest request, TransferAccounts transferAccounts, IRepository<Account> accountRepository)
+    {
+        transferAccounts.SenderAccount.Debit(request.Amount);
+        transferAccounts.ReceiverAccount.Credit(request.Amount);
+
+        accountRepository.Update(transferAccounts.SenderAccount);
+        accountRepository.Update(transferAccounts.ReceiverAccount);
+    }
+
+    private static Transfer CreatePendingTransfer(TransferRequest request, TransferAccounts transferAccounts)
+    {
+        return new Transfer
+        {
+            Amount = request.Amount,
+            CurrencyCode = request.CurrencyCode,
+            SenderAccountId = request.SenderAccountId,
+            SenderAccount = transferAccounts.SenderAccount,
+            ReceiverAccountId = request.ReceiverAccountId,
+            ReceiverAccount = transferAccounts.ReceiverAccount,
+            IdempotencyKey = request.IdempotencyKey,
+            Description = request.Description,
+            Status = TransferStatus.PENDING
+        };
     }
 
     private static Transfer CreateFailedTransfer(
@@ -152,3 +213,5 @@ public class TransferService(
         return transfer;
     }
 }
+
+

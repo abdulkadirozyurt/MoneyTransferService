@@ -24,4 +24,26 @@ public sealed class Account : Entity
 
     public ICollection<Transfer> OutgoingTransfers { get; set; } = [];
     public ICollection<Transfer> IncomingTransfers { get; set; } = [];
+
+    public void Debit(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentException("Amount must be positive.", nameof(amount));
+        }
+        if (Balance < amount)
+        {
+            throw new InvalidOperationException("Insufficient funds.");
+        }
+        Balance -= amount;
+    }
+
+    public void Credit(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentException("Amount must be positive.", nameof(amount));
+        }
+        Balance += amount;
+    }
 }

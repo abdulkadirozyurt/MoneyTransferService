@@ -129,7 +129,13 @@ public class TransferServiceTests
         result.Should().BeEquivalentTo(existingTransfer);
         // Ensure no storage operations or state updates were made for this request
         _accountRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepositoryMock.Verify(r => r.Update(It.IsAny<Account>()), Times.Never);
+        _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transfer>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _auditRepositoryMock.Verify(a => a.LogTransferAsync(
+            It.IsAny<Transfer>(),
+            It.IsAny<string>(),
+            It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
