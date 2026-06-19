@@ -1,5 +1,6 @@
 using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
+using MoneyTransferService.WebAPI.Endpoints;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,5 +22,8 @@ app.MapOpenApi();
 app.MapScalarApiReference();    
 
 app.UseHttpsRedirection();
+
+app.MapAccountEndpoints();
+app.MapTransferEndpoints();
 
 app.Run();

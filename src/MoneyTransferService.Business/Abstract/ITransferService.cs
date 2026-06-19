@@ -12,4 +12,8 @@ public interface ITransferService
         string idempotencyKey,
         string? description = null,
         CancellationToken cancellationToken = default);
+
+    Task<Transfer?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<Transfer>> GetTransferHistoryAsync(CancellationToken cancellationToken = default);
 }

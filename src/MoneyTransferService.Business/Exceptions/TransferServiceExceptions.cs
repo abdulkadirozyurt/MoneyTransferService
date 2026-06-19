@@ -1,5 +1,3 @@
-using System;
-
 namespace MoneyTransferService.Business.Exceptions;
 
 public class InvalidTransferAmountException : Exception
@@ -35,4 +33,9 @@ public class InsufficientFundsException : Exception
 public class ConcurrencyException : Exception
 {
     public ConcurrencyException(string message, Exception? innerException = null) : base(message, innerException) { }
+}
+
+public class TransferPersistenceException : Exception
+{
+    public TransferPersistenceException(string message, Exception? innerException = null) : base(message, innerException) { }
 }

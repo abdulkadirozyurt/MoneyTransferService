@@ -63,6 +63,17 @@ public class TransferService(
         return transfer;
     }
 
+    public async Task<Transfer?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await unitOfWork.GetRepository<Transfer>().GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<IEnumerable<Transfer>> GetTransferHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        var transfers = await unitOfWork.GetRepository<Transfer>().GetAllAsync(cancellationToken);
+        return transfers.OrderByDescending(transfer => transfer.CreatedAt);
+    }
+
     private async Task SaveTransferAsync(
         TransferRequest request,
         TransferAccounts transferAccounts,
@@ -83,6 +94,17 @@ public class TransferService(
                 transfer.Id);
             await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
             throw new ConcurrencyException(failedTransfer.FailureReason!, ex);
+        }
+        catch (DbUpdateException ex)
+        {
+            var failedTransfer = CreateFailedTransfer(
+                request,
+                "Transfer could not be completed.",
+                transferAccounts.SenderAccount,
+                transferAccounts.ReceiverAccount,
+                transfer.Id);
+            await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
+            throw new TransferPersistenceException(failedTransfer.FailureReason!, ex);
         }
     }
 

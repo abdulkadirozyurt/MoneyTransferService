@@ -10,6 +10,7 @@ public static class BusinessServiceRegistration
 {
     public static IServiceCollection RegisterBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ITransferService, TransferService>();
         services.AddScoped<ITransferBusinessRules, TransferBusinessRules>();
         services.AddValidatorsFromAssembly(typeof(BusinessServiceRegistration).Assembly);
