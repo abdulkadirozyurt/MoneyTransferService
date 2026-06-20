@@ -24,6 +24,7 @@ app.MapScalarApiReference();
 app.UseHttpsRedirection();
 
 app.MapAccountEndpoints();
+app.MapCustomerEndpoints();
 app.MapTransferEndpoints();
 
 app.Run();

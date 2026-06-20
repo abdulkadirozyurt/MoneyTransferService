@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Core.DataAccess.Abstract;
@@ -13,6 +16,7 @@ public static class DataAccessRegistrar
 {
     public static IServiceCollection RegisterDataAccessServices(this IServiceCollection services, IConfiguration configuration)
     {
+        BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseSqlServer(configuration.GetConnectionString("SqlServer"));

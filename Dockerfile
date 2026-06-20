@@ -9,6 +9,7 @@ COPY ["src/MoneyTransferService.Entities/MoneyTransferService.Entities.csproj", 
 COPY ["src/MoneyTransferService.DataAccess/MoneyTransferService.DataAccess.csproj", "src/MoneyTransferService.DataAccess/"]
 COPY ["src/MoneyTransferService.Business/MoneyTransferService.Business.csproj", "src/MoneyTransferService.Business/"]
 COPY ["src/MoneyTransferService.WebAPI/MoneyTransferService.WebAPI.csproj", "src/MoneyTransferService.WebAPI/"]
+COPY ["test/MoneyTransferService.Business.Tests/MoneyTransferService.Business.Tests.csproj", "test/MoneyTransferService.Business.Tests/"]
 
 RUN dotnet restore "MoneyTransferService.slnx"
 
