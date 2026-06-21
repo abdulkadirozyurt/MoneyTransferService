@@ -41,7 +41,6 @@ try
 
     app.UseMiddleware<CorrelationIdMiddleware>();
 
-    app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
     {
         options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
@@ -53,6 +52,9 @@ try
             diagnosticsContext.Set("RequestScheme", httpContext.Request.Scheme);
         };
     });
+
+    app.UseExceptionHandler();
+    
 
     // if (app.Environment.IsDevelopment())
     // {
