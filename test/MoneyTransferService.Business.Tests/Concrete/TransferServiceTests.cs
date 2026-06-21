@@ -39,7 +39,7 @@ public class TransferServiceTests
 
         _transferService = new TransactionService(
             _unitOfWorkMock.Object,
-            new TransferRequestValidator(),
+            new TransferCommandValidator(),
             new TransferBusinessRules(),
             _auditRepositoryMock.Object);
     }

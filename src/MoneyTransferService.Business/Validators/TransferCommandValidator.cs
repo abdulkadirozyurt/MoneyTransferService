@@ -3,9 +3,9 @@ using MoneyTransferService.Business.Requests;
 
 namespace MoneyTransferService.Business.Validators;
 
-public sealed class TransferRequestValidator : AbstractValidator<TransferCommand>
+public sealed class TransferCommandValidator : AbstractValidator<TransferCommand>
 {
-    public TransferRequestValidator()
+    public TransferCommandValidator()
     {
         RuleFor(x => x.SenderAccountId)
             .NotEmpty()
