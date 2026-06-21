@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.BusinessRules;
 using MoneyTransferService.Business.Concrete;
 
 namespace MoneyTransferService.Business;
@@ -12,7 +13,7 @@ public static class BusinessServiceRegistration
     {
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICustomerService, CustomerService>();
-        services.AddScoped<ITransferService, TransactionService>();
+        services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransferBusinessRules, TransferBusinessRules>();
         services.AddValidatorsFromAssembly(typeof(BusinessServiceRegistration).Assembly);
         return services;

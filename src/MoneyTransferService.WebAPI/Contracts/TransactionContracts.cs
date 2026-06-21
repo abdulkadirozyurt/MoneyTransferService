@@ -10,7 +10,7 @@ public sealed record CreateTransferRequest(
     string IdempotencyKey,
     string? Description = null);
 
-public sealed record TransferResponse(
+public sealed record TransactionResponse(
     Guid Id,
     Guid SenderAccountId,
     Guid ReceiverAccountId,
@@ -23,19 +23,19 @@ public sealed record TransferResponse(
     DateTimeOffset? CompletedAt,
     DateTimeOffset CreatedAt)
 {
-    public static TransferResponse FromTransfer(Transaction transfer)
+    public static TransactionResponse FromTransaction(Transaction transaction)
     {
-        return new TransferResponse(
-            transfer.Id,
-            transfer.SenderAccountId,
-            transfer.ReceiverAccountId,
-            transfer.Amount,
-            transfer.CurrencyCode,
-            transfer.Status,
-            transfer.IdempotencyKey,
-            transfer.Description,
-            transfer.FailureReason,
-            transfer.CompletedAt,
-            transfer.CreatedAt);
+        return new TransactionResponse(
+            transaction.Id,
+            transaction.SenderAccountId,
+            transaction.ReceiverAccountId,
+            transaction.Amount,
+            transaction.CurrencyCode,
+            transaction.Status,
+            transaction.IdempotencyKey,
+            transaction.Description,
+            transaction.FailureReason,
+            transaction.CompletedAt,
+            transaction.CreatedAt);
     }
 }

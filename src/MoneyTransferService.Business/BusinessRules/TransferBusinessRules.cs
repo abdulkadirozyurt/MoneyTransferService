@@ -3,7 +3,7 @@ using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Entities.Concrete;
 
-namespace MoneyTransferService.Business.Concrete;
+namespace MoneyTransferService.Business.BusinessRules;
 
 public sealed class TransferBusinessRules : ITransferBusinessRules
 {

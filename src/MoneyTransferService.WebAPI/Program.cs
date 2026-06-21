@@ -30,8 +30,10 @@ app.MapScalarApiReference();
 
 app.UseHttpsRedirection();
 
-app.MapAccountEndpoints();
-app.MapCustomerEndpoints();
-app.MapTransferEndpoints();
+var api = app.MapGroup("/api");
+
+api.MapAccountEndpoints();
+api.MapCustomerEndpoints();
+api.MapTransactionEndpoints();
 
 app.Run();

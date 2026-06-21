@@ -14,28 +14,12 @@ public class TransactionService(
     IUnitOfWork unitOfWork,
     ITransactionRepository transactionRepository,
     IAccountRepository accountRepository,
-    IValidator<TransferRequest> transferRequestValidator,
+    IValidator<TransferCommand> transferRequestValidator,
     ITransferBusinessRules transferBusinessRules,
-    ITransactionAuditRepository auditRepository) : ITransferService
+    ITransactionAuditRepository auditRepository) : ITransactionService
 {
-    public async Task<Transaction> TransferAsync(
-        Guid senderAccountId,
-        Guid receiverAccountId,
-        decimal amount,
-        string currencyCode,
-        string idempotencyKey,
-        string? description = null,
-        CancellationToken cancellationToken = default)
+    public async Task<Transaction> TransferAsync(TransferCommand request, CancellationToken cancellationToken = default)
     {
-        var request = new TransferRequest(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey,
-            description
-        );
-
         await ValidateRequestAsync(request, cancellationToken);
 
         Transaction? existingTransfer = await GetExistingTransferAsync(request, transactionRepository, cancellationToken);
@@ -75,7 +59,7 @@ public class TransactionService(
     }
 
     private async Task SaveTransferAsync(
-        TransferRequest request,
+        TransferCommand request,
         TransferAccounts transferAccounts,
         Transaction transfer,
         CancellationToken cancellationToken)
@@ -115,7 +99,7 @@ public class TransactionService(
         await transcationRepository.AddAsync(transfer, cancellationToken);
     }
 
-    private async Task EnsureTransferCanBeCompletedAsync(TransferRequest request, TransferAccounts transferAccounts)
+    private async Task EnsureTransferCanBeCompletedAsync(TransferCommand request, TransferAccounts transferAccounts)
     {
         transferBusinessRules.EnsureAccountIsActive(transferAccounts.SenderAccount, AccountRole.SENDER);
         transferBusinessRules.EnsureAccountIsActive(transferAccounts.ReceiverAccount, AccountRole.RECEIVER);
@@ -145,7 +129,7 @@ public class TransactionService(
 
     private sealed record TransferAccounts(Account SenderAccount, Account ReceiverAccount);
 
-    private async Task<TransferAccounts> GetTransferAccountsAsync(IRepository<Account> accountRepository, TransferRequest request, CancellationToken cancellationToken)
+    private async Task<TransferAccounts> GetTransferAccountsAsync(IRepository<Account> accountRepository, TransferCommand request, CancellationToken cancellationToken)
     {
         var senderAccount = transferBusinessRules.EnsureAccountExists(
             await accountRepository.GetByIdAsync(request.SenderAccountId, cancellationToken),
@@ -160,13 +144,13 @@ public class TransactionService(
         return new TransferAccounts(senderAccount, receiverAccount);
     }
 
-    private static async Task<Transaction?> GetExistingTransferAsync(TransferRequest request, IRepository<Transaction> transferRepository, CancellationToken cancellationToken)
+    private static async Task<Transaction?> GetExistingTransferAsync(TransferCommand request, IRepository<Transaction> transferRepository, CancellationToken cancellationToken)
     {
         var existingTransfers = await transferRepository.GetAllAsync(cancellationToken);
         return existingTransfers.FirstOrDefault(t => t.IdempotencyKey == request.IdempotencyKey);
     }
 
-    private async Task ValidateRequestAsync(TransferRequest request, CancellationToken cancellationToken)
+    private async Task ValidateRequestAsync(TransferCommand request, CancellationToken cancellationToken)
     {
         var validationResult = await transferRequestValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
@@ -175,7 +159,7 @@ public class TransactionService(
         }
     }
 
-    private static void ApplyTransferBalanceChanges(TransferRequest request, TransferAccounts transferAccounts, IRepository<Account> accountRepository)
+    private static void ApplyTransferBalanceChanges(TransferCommand request, TransferAccounts transferAccounts, IRepository<Account> accountRepository)
     {
         transferAccounts.SenderAccount.Debit(request.Amount);
         transferAccounts.ReceiverAccount.Credit(request.Amount);
@@ -184,7 +168,7 @@ public class TransactionService(
         accountRepository.Update(transferAccounts.ReceiverAccount);
     }
 
-    private static Transaction CreatePendingTransfer(TransferRequest request, TransferAccounts transferAccounts)
+    private static Transaction CreatePendingTransfer(TransferCommand request, TransferAccounts transferAccounts)
     {
         return new Transaction
         {
@@ -201,7 +185,7 @@ public class TransactionService(
     }
 
     private static Transaction CreateFailedTransfer(
-        TransferRequest request,
+        TransferCommand request,
         string failureReason,
         Account? senderAccount = null,
         Account? receiverAccount = null,

@@ -1,6 +1,6 @@
 namespace MoneyTransferService.Business.Requests;
 
-public sealed record TransferRequest(
+public sealed record TransferCommand(
     Guid SenderAccountId,
     Guid ReceiverAccountId,
     decimal Amount,

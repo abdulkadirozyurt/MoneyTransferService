@@ -1,6 +1,6 @@
 using System;
 using FluentAssertions;
-using MoneyTransferService.Business.Concrete;
+using MoneyTransferService.Business.BusinessRules;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Entities.Concrete;

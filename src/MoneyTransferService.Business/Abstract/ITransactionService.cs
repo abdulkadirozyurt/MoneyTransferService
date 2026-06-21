@@ -1,17 +1,11 @@
+using MoneyTransferService.Business.Requests;
 using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Abstract;
 
-public interface ITransferService
+public interface ITransactionService
 {
-    Task<Transaction> TransferAsync(
-        Guid senderAccountId,
-        Guid receiverAccountId,
-        decimal amount,
-        string currencyCode,
-        string idempotencyKey,
-        string? description = null,
-        CancellationToken cancellationToken = default);
+    Task<Transaction> TransferAsync(TransferCommand request, CancellationToken cancellationToken = default);
 
     Task<Transaction?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default);
 

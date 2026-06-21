@@ -3,7 +3,7 @@ using MoneyTransferService.Business.Requests;
 
 namespace MoneyTransferService.Business.Validators;
 
-public sealed class TransferRequestValidator : AbstractValidator<TransferRequest>
+public sealed class TransferRequestValidator : AbstractValidator<TransferCommand>
 {
     public TransferRequestValidator()
     {
