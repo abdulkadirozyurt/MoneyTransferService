@@ -70,7 +70,7 @@ public class TransactionService(
 
     public async Task<IEnumerable<Transaction>> GetTransferHistoryAsync(CancellationToken cancellationToken = default)
     {
-        var transfers = await unitOfWork.GetRepository<Transaction>().GetAllAsync(cancellationToken);
+        var transfers = await transactionRepository.GetAllAsync(cancellationToken);
         return transfers.OrderByDescending(transfer => transfer.CreatedAt);
     }
 

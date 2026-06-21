@@ -2,11 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using MoneyTransferService.Business.Abstract;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.DataAccess.Abstract;
+using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Concrete;
 
-public class CustomerService(IUnitOfWork unitOfWork) : ICustomerService
+public class CustomerService(
+    IUnitOfWork unitOfWork,
+    IIndividualCustomerRepository individualCustomerRepository,
+    ICorporateCustomerRepository corporateCustomerRepository) : ICustomerService
 {
     public async Task<IndividualCustomer> CreateIndividualCustomerAsync(
         string email,
@@ -28,7 +32,7 @@ public class CustomerService(IUnitOfWork unitOfWork) : ICustomerService
             NationalIdentityNumber = nationalIdentityNumber.Trim()
         };
 
-        await unitOfWork.GetRepository<IndividualCustomer>().AddAsync(customer, cancellationToken);
+        await individualCustomerRepository.AddAsync(customer, cancellationToken);
 
         try
         {
@@ -62,7 +66,7 @@ public class CustomerService(IUnitOfWork unitOfWork) : ICustomerService
             TaxOffice = taxOffice.Trim()
         };
 
-        await unitOfWork.GetRepository<CorporateCustomer>().AddAsync(customer, cancellationToken);
+        await corporateCustomerRepository.AddAsync(customer, cancellationToken);
 
         try
         {
@@ -77,16 +81,16 @@ public class CustomerService(IUnitOfWork unitOfWork) : ICustomerService
     }
 
     public async Task<IndividualCustomer?> GetIndividualCustomerByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => await unitOfWork.GetRepository<IndividualCustomer>().GetByIdAsync(id, cancellationToken);
+        => await individualCustomerRepository.GetByIdAsync(id, cancellationToken);
 
     public async Task<CorporateCustomer?> GetCorporateCustomerByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => await unitOfWork.GetRepository<CorporateCustomer>().GetByIdAsync(id, cancellationToken);
+        => await corporateCustomerRepository.GetByIdAsync(id, cancellationToken);
 
     public async Task<IEnumerable<IndividualCustomer>> GetIndividualCustomersAsync(CancellationToken cancellationToken = default)
-        => await unitOfWork.GetRepository<IndividualCustomer>().GetAllAsync(cancellationToken);
+        => await individualCustomerRepository.GetAllAsync(cancellationToken);
 
     public async Task<IEnumerable<CorporateCustomer>> GetCorporateCustomersAsync(CancellationToken cancellationToken = default)
-        => await unitOfWork.GetRepository<CorporateCustomer>().GetAllAsync(cancellationToken);
+        => await corporateCustomerRepository.GetAllAsync(cancellationToken);
 
     private static void ValidateCommonFields(string email, string phoneNumber)
     {

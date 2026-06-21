@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MoneyTransferService.Business.Exceptions;
 
@@ -9,12 +10,36 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         logger.LogError(exception, "An unhandled exception occurred while processing the request. Trace ID: {TraceId}", httpContext.TraceIdentifier);
+
+        if (exception is ValidationException validationException)
+        {
+            var validationProblemDetails = new HttpValidationProblemDetails(
+                validationException.Errors
+                    .GroupBy(error => error.PropertyName)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.Select(error => error.ErrorMessage).ToArray()))
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "One or more validation errors occurred.",
+                Detail = "Please refer to the errors property for additional details.",
+                Instance = httpContext.Request.Path
+            };
+
+            validationProblemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            await httpContext.Response.WriteAsJsonAsync(validationProblemDetails, cancellationToken);
+
+            return true;
+        }
+
         var (status, title, detail) = exception switch
         {
             BusinessException businessException => (
                 (int)businessException.StatusCode,
                 "Request failed.",
-                businessException.Message),           
+                businessException.Message),
 
             _ => (
                 StatusCodes.Status500InternalServerError,

@@ -10,19 +10,19 @@ namespace MoneyTransferService.Business.Tests.Concrete;
 public class TransferAuditRepositoryTests
 {
     private readonly Mock<IMongoDatabase> _databaseMock;
-    private readonly Mock<IMongoCollection<TransferAuditLog>> _collectionMock;
-    private readonly TransferAuditRepository _transferAuditRepository;
+    private readonly Mock<IMongoCollection<TransactionAuditLog>> _collectionMock;
+    private readonly TransactionAuditRepository _transferAuditRepository;
 
     public TransferAuditRepositoryTests()
     {
         _databaseMock = new Mock<IMongoDatabase>();
-        _collectionMock = new Mock<IMongoCollection<TransferAuditLog>>();
+        _collectionMock = new Mock<IMongoCollection<TransactionAuditLog>>();
 
         _databaseMock
-            .Setup(db => db.GetCollection<TransferAuditLog>(It.IsAny<string>(), It.IsAny<MongoCollectionSettings>()))
+            .Setup(db => db.GetCollection<TransactionAuditLog>(It.IsAny<string>(), It.IsAny<MongoCollectionSettings>()))
             .Returns(_collectionMock.Object);
 
-        _transferAuditRepository = new TransferAuditRepository(_databaseMock.Object);
+        _transferAuditRepository = new TransactionAuditRepository(_databaseMock.Object);
     }
 
     [Fact]
@@ -56,13 +56,13 @@ public class TransferAuditRepositoryTests
         string eventType = AuditEventType.COMPLETED;
         string? failureReason = "Specific failure reason";
 
-        TransferAuditLog? capturedLog = null;
+        TransactionAuditLog? capturedLog = null;
         _collectionMock
             .Setup(c => c.InsertOneAsync(
-                It.IsAny<TransferAuditLog>(),
+                It.IsAny<TransactionAuditLog>(),
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<TransferAuditLog, InsertOneOptions, CancellationToken>((log, opt, token) => capturedLog = log)
+            .Callback<TransactionAuditLog, InsertOneOptions, CancellationToken>((log, opt, token) => capturedLog = log)
             .Returns(Task.CompletedTask);
 
         // Act
@@ -70,12 +70,12 @@ public class TransferAuditRepositoryTests
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
-            It.IsAny<TransferAuditLog>(),
+            It.IsAny<TransactionAuditLog>(),
             It.IsAny<InsertOneOptions>(),
             It.IsAny<CancellationToken>()), Times.Once);
 
         capturedLog.Should().NotBeNull();
-        capturedLog!.TransferId.Should().Be(transfer.Id);
+        capturedLog!.TransactionId.Should().Be(transfer.Id);
         capturedLog.EventType.Should().Be(eventType);
         capturedLog.SenderAccountNumber.Should().Be(senderAccount.AccountNumber);
         capturedLog.ReceiverAccountNumber.Should().Be(receiverAccount.AccountNumber);
@@ -98,7 +98,7 @@ public class TransferAuditRepositoryTests
             FailureReason = "Transfer internal error"
         };
         _collectionMock
-            .Setup(c => c.InsertOneAsync(It.IsAny<TransferAuditLog>(), It.IsAny<InsertOneOptions>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.InsertOneAsync(It.IsAny<TransactionAuditLog>(), It.IsAny<InsertOneOptions>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -106,7 +106,7 @@ public class TransferAuditRepositoryTests
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
-            It.Is<TransferAuditLog>(log => log.FailureReason == "Parameter level error"),
+            It.Is<TransactionAuditLog>(log => log.FailureReason == "Parameter level error"),
             It.IsAny<InsertOneOptions>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -124,7 +124,7 @@ public class TransferAuditRepositoryTests
             FailureReason = "Transfer internal error"
         };
         _collectionMock
-            .Setup(c => c.InsertOneAsync(It.IsAny<TransferAuditLog>(), It.IsAny<InsertOneOptions>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.InsertOneAsync(It.IsAny<TransactionAuditLog>(), It.IsAny<InsertOneOptions>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -132,7 +132,7 @@ public class TransferAuditRepositoryTests
 
         // Assert
         _collectionMock.Verify(c => c.InsertOneAsync(
-            It.Is<TransferAuditLog>(log => log.FailureReason == "Transfer internal error"),
+            It.Is<TransactionAuditLog>(log => log.FailureReason == "Transfer internal error"),
             It.IsAny<InsertOneOptions>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }

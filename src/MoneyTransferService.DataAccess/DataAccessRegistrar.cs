@@ -43,6 +43,10 @@ public static class DataAccessRegistrar
         });
 
         services.AddScoped<ITransactionAuditRepository, TransactionAuditRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IIndividualCustomerRepository, IndividualCustomerRepository>();
+        services.AddScoped<ICorporateCustomerRepository, CorporateCustomerRepository>();
 
         return services;
     }

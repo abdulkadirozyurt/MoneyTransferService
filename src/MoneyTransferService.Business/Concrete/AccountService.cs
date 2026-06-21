@@ -3,11 +3,16 @@ using MoneyTransferService.Business.Abstract;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Core.DataAccess.Abstract;
+using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Concrete;
 
-public class AccountService(IUnitOfWork unitOfWork) : IAccountService
+public class AccountService(
+    IUnitOfWork unitOfWork,
+    IAccountRepository accountRepository,
+    IIndividualCustomerRepository individualCustomerRepository,
+    ICorporateCustomerRepository corporateCustomerRepository) : IAccountService
 {
     public async Task<Account> CreateAccountAsync(
         Guid? individualCustomerId,
@@ -33,7 +38,7 @@ public class AccountService(IUnitOfWork unitOfWork) : IAccountService
             CorporateCustomerId = corporateCustomerId
         };
 
-        await unitOfWork.GetRepository<Account>().AddAsync(account, cancellationToken);
+        await accountRepository.AddAsync(account, cancellationToken);
 
         try
         {
@@ -49,7 +54,7 @@ public class AccountService(IUnitOfWork unitOfWork) : IAccountService
 
     public async Task<Account?> GetAccountByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await unitOfWork.GetRepository<Account>().GetByIdAsync(id, cancellationToken);
+        return await accountRepository.GetByIdAsync(id, cancellationToken);
     }
 
     private static void ValidateCreateRequest(
@@ -81,12 +86,10 @@ public class AccountService(IUnitOfWork unitOfWork) : IAccountService
     {
         if (individualCustomerId is Guid individualCustomerGuid)
         {
-            return await unitOfWork.GetRepository<IndividualCustomer>()
-                .GetByIdAsync(individualCustomerGuid, cancellationToken) is not null;
+            return await individualCustomerRepository.GetByIdAsync(individualCustomerGuid, cancellationToken) is not null;
         }
 
-        return await unitOfWork.GetRepository<CorporateCustomer>()
-            .GetByIdAsync(corporateCustomerId!.Value, cancellationToken) is not null;
+        return await corporateCustomerRepository.GetByIdAsync(corporateCustomerId!.Value, cancellationToken) is not null;
     }
 
     private static string GenerateAccountNumber()

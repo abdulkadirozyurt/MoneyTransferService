@@ -10,11 +10,9 @@ public class Repository<TEntity, TContext>(TContext context) : IRepository<TEnti
     where TContext : DbContext
 {
     private DbSet<TEntity> Entity => context.Set<TEntity>();
-    public async Task<IQueryable<TEntity>> GetAllAsync(Expression<Func<TEntity, bool>> filter = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await Task.FromResult(filter == null)
-            ? Entity.AsQueryable()
-            : Entity.Where(filter).AsQueryable();
+        return await Task.FromResult(Entity.AsEnumerable());
     }
 
     public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
