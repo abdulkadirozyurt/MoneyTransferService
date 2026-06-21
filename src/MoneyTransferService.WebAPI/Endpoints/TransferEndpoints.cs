@@ -1,6 +1,4 @@
-using FluentValidation;
 using MoneyTransferService.Business.Abstract;
-using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.WebAPI.Contracts;
 
 namespace MoneyTransferService.WebAPI.Endpoints;
@@ -29,50 +27,16 @@ public static class TransferEndpoints
         ITransferService transferService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var transfer = await transferService.TransferAsync(
-                request.SenderAccountId,
-                request.ReceiverAccountId,
-                request.Amount,
-                request.CurrencyCode,
-                request.IdempotencyKey,
-                request.Description,
-                cancellationToken);
+        var transfer = await transferService.TransferAsync(
+            request.SenderAccountId,
+            request.ReceiverAccountId,
+            request.Amount,
+            request.CurrencyCode,
+            request.IdempotencyKey,
+            request.Description,
+            cancellationToken);
 
-            return Results.Created($"/transfers/{transfer.Id}", TransferResponse.FromTransfer(transfer));
-        }
-        catch (ValidationException ex)
-        {
-            return Results.BadRequest(new
-            {
-                error = ex.Message,
-                details = ex.Errors.Select(error => new { error.PropertyName, error.ErrorMessage })
-            });
-        }
-        catch (AccountNotFoundException ex)
-        {
-            return Results.NotFound(new { error = ex.Message });
-        }
-        catch (InsufficientFundsException ex)
-        {
-            return Results.Conflict(new { error = ex.Message });
-        }
-        catch (ConcurrencyException ex)
-        {
-            return Results.Conflict(new { error = ex.Message });
-        }
-        catch (TransferPersistenceException ex)
-        {
-            return Results.Conflict(new { error = ex.Message });
-        }
-        catch (Exception ex) when (ex is InvalidTransferAmountException
-                                   or SameAccountTransferException
-                                   or AccountNotActiveException
-                                   or CurrencyMismatchException)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
+        return Results.Created($"/transfers/{transfer.Id}", TransferResponse.FromTransfer(transfer));
     }
 
     private static async Task<IResult> GetTransferByIdAsync(

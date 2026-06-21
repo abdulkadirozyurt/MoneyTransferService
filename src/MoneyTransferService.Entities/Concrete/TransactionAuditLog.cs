@@ -3,16 +3,16 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace MoneyTransferService.Entities.Concrete;
 
-public sealed class TransferAuditLog
+public sealed class TransactionAuditLog
 {
-    public TransferAuditLog()
+    public TransactionAuditLog()
     {
         Timestamp = DateTimeOffset.UtcNow;
     }
 
     [BsonId]
     public ObjectId Id { get; set; }
-    public Guid TransferId { get; set; }
+    public Guid TransactionId { get; set; }
     public string EventType { get; set; } = string.Empty; // "Initiated" | "Completed" | "Failed"
     public string SenderAccountNumber { get; set; } = string.Empty;
     public string ReceiverAccountNumber { get; set; } = string.Empty;

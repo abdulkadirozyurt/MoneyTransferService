@@ -4,23 +4,23 @@ using MoneyTransferService.DataAccess.Abstract;
 
 namespace MoneyTransferService.DataAccess.Concrete;
 
-public class TransferAuditRepository : ITransferAuditRepository
+public class TransactionAuditRepository : ITransactionAuditRepository
 {
-    private readonly IMongoCollection<TransferAuditLog> _collection;
+    private readonly IMongoCollection<TransactionAuditLog> _collection;
 
-    public TransferAuditRepository(IMongoDatabase database)
+    public TransactionAuditRepository(IMongoDatabase database)
     {
-        _collection = database.GetCollection<TransferAuditLog>("TransferAuditLogs");
+        _collection = database.GetCollection<TransactionAuditLog>("TransactionAuditLogs");
     }
 
-    public async Task LogTransferAsync(Transfer transfer, string eventType, string? failureReason = null)
+    public async Task LogTransferAsync(Transaction transfer, string eventType, string? failureReason = null)
     {
         if (transfer == null)
             throw new ArgumentNullException(nameof(transfer));
 
-        var auditLog = new TransferAuditLog
+        var auditLog = new TransactionAuditLog
         {
-            TransferId = transfer.Id,
+            TransactionId = transfer.Id,
             EventType = eventType,
             SenderAccountNumber = transfer.SenderAccount?.AccountNumber ?? string.Empty,
             ReceiverAccountNumber = transfer.ReceiverAccount?.AccountNumber ?? string.Empty,

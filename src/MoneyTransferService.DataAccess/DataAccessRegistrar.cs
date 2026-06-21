@@ -22,8 +22,7 @@ public static class DataAccessRegistrar
             options.UseSqlServer(configuration.GetConnectionString("SqlServer"));
         });
 
-        services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWork>(service => service.GetRequiredService<ApplicationDbContext>());
 
         var connectionString = configuration.GetConnectionString("MongoDb");
         if (string.IsNullOrEmpty(connectionString))
@@ -43,7 +42,7 @@ public static class DataAccessRegistrar
             return mongoClient.GetDatabase(databaseName);
         });
 
-        services.AddScoped<ITransferAuditRepository, TransferAuditRepository>();
+        services.AddScoped<ITransactionAuditRepository, TransactionAuditRepository>();
 
         return services;
     }

@@ -4,9 +4,9 @@ using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.DataAccess.Configurations;
 
-public class TransferConfiguration : IEntityTypeConfiguration<Transfer>
+public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
-    public void Configure(EntityTypeBuilder<Transfer> builder)
+    public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder
             .HasOne(t => t.SenderAccount)

@@ -1,41 +1,49 @@
+using System.Net;
+
 namespace MoneyTransferService.Business.Exceptions;
 
-public class InvalidTransferAmountException : Exception
+public class InvalidTransferAmountException : BusinessException
 {
-    public InvalidTransferAmountException(string message) : base(message) { }
+    public InvalidTransferAmountException(string message) : base(HttpStatusCode.BadRequest, message) { }
 }
 
-public class SameAccountTransferException : Exception
+public class SameAccountTransferException : BusinessException
 {
-    public SameAccountTransferException(string message) : base(message) { }
+    public SameAccountTransferException(string message) : base(HttpStatusCode.BadRequest, message) { }
 }
 
-public class AccountNotFoundException : Exception
+public class AccountNotFoundException : BusinessException
 {
-    public AccountNotFoundException(string message) : base(message) { }
+    public AccountNotFoundException(string message) : base(HttpStatusCode.NotFound, message) { }
 }
 
-public class AccountNotActiveException : Exception
+public class AccountNotActiveException : BusinessException
 {
-    public AccountNotActiveException(string message) : base(message) { }
+    public AccountNotActiveException(string message) : base(HttpStatusCode.BadRequest, message) { }
 }
 
-public class CurrencyMismatchException : Exception
+public class CurrencyMismatchException : BusinessException
 {
-    public CurrencyMismatchException(string message) : base(message) { }
+    public CurrencyMismatchException(string message) : base(HttpStatusCode.BadRequest, message) { }
 }
 
-public class InsufficientFundsException : Exception
+public class InsufficientFundsException : BusinessException
 {
-    public InsufficientFundsException(string message) : base(message) { }
+    public InsufficientFundsException(string message) : base(HttpStatusCode.Conflict, message) { }
 }
 
-public class ConcurrencyException : Exception
+public class ConcurrencyException : BusinessException
 {
-    public ConcurrencyException(string message, Exception? innerException = null) : base(message, innerException) { }
+    public ConcurrencyException(string message, Exception? innerException = null)
+        : base(HttpStatusCode.Conflict, message, innerException)
+    {
+    }
 }
 
-public class TransferPersistenceException : Exception
+public class TransferPersistenceException : BusinessException
 {
-    public TransferPersistenceException(string message, Exception? innerException = null) : base(message, innerException) { }
+    public TransferPersistenceException(string message, Exception? innerException = null)
+        : base(HttpStatusCode.Conflict, message, innerException)
+    {
+    }
 }

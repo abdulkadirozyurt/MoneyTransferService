@@ -4,7 +4,7 @@ namespace MoneyTransferService.Business.Abstract;
 
 public interface ITransferService
 {
-    Task<Transfer> TransferAsync(
+    Task<Transaction> TransferAsync(
         Guid senderAccountId,
         Guid receiverAccountId,
         decimal amount,
@@ -13,7 +13,7 @@ public interface ITransferService
         string? description = null,
         CancellationToken cancellationToken = default);
 
-    Task<Transfer?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Transaction?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<IEnumerable<Transfer>> GetTransferHistoryAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<Transaction>> GetTransferHistoryAsync(CancellationToken cancellationToken = default);
 }

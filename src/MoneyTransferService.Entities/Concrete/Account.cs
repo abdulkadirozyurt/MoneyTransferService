@@ -22,8 +22,8 @@ public sealed class Account : Entity
     public Guid? CorporateCustomerId { get; set; }
     public CorporateCustomer? CorporateCustomer { get; set; }
 
-    public ICollection<Transfer> OutgoingTransfers { get; set; } = [];
-    public ICollection<Transfer> IncomingTransfers { get; set; } = [];
+    public ICollection<Transaction> OutgoingTransfers { get; set; } = [];
+    public ICollection<Transaction> IncomingTransfers { get; set; } = [];
 
     public void Debit(decimal amount)
     {

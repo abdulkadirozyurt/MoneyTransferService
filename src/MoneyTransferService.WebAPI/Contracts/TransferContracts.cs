@@ -23,7 +23,7 @@ public sealed record TransferResponse(
     DateTimeOffset? CompletedAt,
     DateTimeOffset CreatedAt)
 {
-    public static TransferResponse FromTransfer(Transfer transfer)
+    public static TransferResponse FromTransfer(Transaction transfer)
     {
         return new TransferResponse(
             transfer.Id,

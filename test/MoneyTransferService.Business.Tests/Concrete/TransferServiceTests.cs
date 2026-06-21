@@ -23,21 +23,21 @@ public class TransferServiceTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IRepository<Account>> _accountRepositoryMock;
-    private readonly Mock<IRepository<Transfer>> _transferRepositoryMock;
-    private readonly Mock<ITransferAuditRepository> _auditRepositoryMock;
-    private readonly TransferService _transferService;
+    private readonly Mock<IRepository<Transaction>> _transferRepositoryMock;
+    private readonly Mock<ITransactionAuditRepository> _auditRepositoryMock;
+    private readonly TransactionService _transferService;
 
     public TransferServiceTests()
     {
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _accountRepositoryMock = new Mock<IRepository<Account>>();
-        _transferRepositoryMock = new Mock<IRepository<Transfer>>();
-        _auditRepositoryMock = new Mock<ITransferAuditRepository>();
+        _transferRepositoryMock = new Mock<IRepository<Transaction>>();
+        _auditRepositoryMock = new Mock<ITransactionAuditRepository>();
 
         _unitOfWorkMock.Setup(u => u.GetRepository<Account>()).Returns(_accountRepositoryMock.Object);
-        _unitOfWorkMock.Setup(u => u.GetRepository<Transfer>()).Returns(_transferRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.GetRepository<Transaction>()).Returns(_transferRepositoryMock.Object);
 
-        _transferService = new TransferService(
+        _transferService = new TransactionService(
             _unitOfWorkMock.Object,
             new TransferRequestValidator(),
             new TransferBusinessRules(),
@@ -66,7 +66,7 @@ public class TransferServiceTests
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.IsAny<Transfer>(),
+            It.IsAny<Transaction>(),
             It.IsAny<string>(),
             It.IsAny<string?>()), Times.Never);
     }
@@ -102,7 +102,7 @@ public class TransferServiceTests
         var currencyCode = "USD";
         var idempotencyKey = "duplicate-key";
 
-        var existingTransfer = new Transfer
+        var existingTransfer = new Transaction
         {
             Id = Guid.NewGuid(),
             SenderAccountId = senderAccountId,
@@ -115,7 +115,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer> { existingTransfer });
+            .ReturnsAsync(new List<Transaction> { existingTransfer });
 
         // Act
         var result = await _transferService.TransferAsync(
@@ -130,10 +130,10 @@ public class TransferServiceTests
         // Ensure no storage operations or state updates were made for this request
         _accountRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _accountRepositoryMock.Verify(r => r.Update(It.IsAny<Account>()), Times.Never);
-        _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transfer>(), It.IsAny<CancellationToken>()), Times.Never);
+        _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.IsAny<Transfer>(),
+            It.IsAny<Transaction>(),
             It.IsAny<string>(),
             It.IsAny<string?>()), Times.Never);
     }
@@ -150,7 +150,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -189,7 +189,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -243,7 +243,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -295,7 +295,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -347,7 +347,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -368,7 +368,7 @@ public class TransferServiceTests
         // Assert
         await act.Should().ThrowAsync<InsufficientFundsException>();
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.Is<Transfer>(t => t.Amount == amount && t.CurrencyCode == currencyCode && t.SenderAccount == senderAccount && t.ReceiverAccount == receiverAccount),
+            It.Is<Transaction>(t => t.Amount == amount && t.CurrencyCode == currencyCode && t.SenderAccount == senderAccount && t.ReceiverAccount == receiverAccount),
             AuditEventType.FAILED,
             It.IsAny<string>()), Times.Once);
     }
@@ -404,7 +404,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -415,7 +415,7 @@ public class TransferServiceTests
             .ReturnsAsync(receiverAccount);
 
         _transferRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<Transfer>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _unitOfWorkMock
@@ -446,12 +446,12 @@ public class TransferServiceTests
 
         _accountRepositoryMock.Verify(r => r.Update(senderAccount), Times.Once);
         _accountRepositoryMock.Verify(r => r.Update(receiverAccount), Times.Once);
-        _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transfer>(), It.IsAny<CancellationToken>()), Times.Once);
+        _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
         // Initiated called first, then Completed called
-        _auditRepositoryMock.Verify(a => a.LogTransferAsync(It.IsAny<Transfer>(), AuditEventType.INITIATED, null), Times.Once);
-        _auditRepositoryMock.Verify(a => a.LogTransferAsync(It.IsAny<Transfer>(), AuditEventType.COMPLETED, null), Times.Once);
+        _auditRepositoryMock.Verify(a => a.LogTransferAsync(It.IsAny<Transaction>(), AuditEventType.INITIATED, null), Times.Once);
+        _auditRepositoryMock.Verify(a => a.LogTransferAsync(It.IsAny<Transaction>(), AuditEventType.COMPLETED, null), Times.Once);
     }
 
     [Fact]
@@ -484,7 +484,7 @@ public class TransferServiceTests
 
         _transferRepositoryMock
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transfer>());
+            .ReturnsAsync(new List<Transaction>());
 
         _accountRepositoryMock
             .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
@@ -509,7 +509,7 @@ public class TransferServiceTests
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.Is<Transfer>(t => t.IdempotencyKey == idempotencyKey),
+            It.Is<Transaction>(t => t.IdempotencyKey == idempotencyKey),
             AuditEventType.FAILED,
             It.IsAny<string>()), Times.Once);
     }

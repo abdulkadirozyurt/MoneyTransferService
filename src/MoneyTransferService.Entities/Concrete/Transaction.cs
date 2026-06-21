@@ -3,7 +3,7 @@ using MoneyTransferService.Core.Constants;
 
 namespace MoneyTransferService.Entities.Concrete;
 
-public sealed class Transfer : Entity
+public sealed class Transaction : Entity
 {
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = default!;

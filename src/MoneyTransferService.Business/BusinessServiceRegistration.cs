@@ -12,7 +12,7 @@ public static class BusinessServiceRegistration
     {
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICustomerService, CustomerService>();
-        services.AddScoped<ITransferService, TransferService>();
+        services.AddScoped<ITransferService, TransactionService>();
         services.AddScoped<ITransferBusinessRules, TransferBusinessRules>();
         services.AddValidatorsFromAssembly(typeof(BusinessServiceRegistration).Assembly);
         return services;

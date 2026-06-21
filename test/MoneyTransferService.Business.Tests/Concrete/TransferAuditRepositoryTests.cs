@@ -43,7 +43,7 @@ public class TransferAuditRepositoryTests
             Balance = 500.00m
         };
 
-        var transfer = new Transfer
+        var transfer = new Transaction
         {
             Amount = 250.00m,
             CurrencyCode = "USD",
@@ -91,7 +91,7 @@ public class TransferAuditRepositoryTests
         // Arrange
         var senderAccount = new Account { AccountNumber = "ACC-1" };
         var receiverAccount = new Account { AccountNumber = "ACC-2" };
-        var transfer = new Transfer
+        var transfer = new Transaction
         {
             SenderAccount = senderAccount,
             ReceiverAccount = receiverAccount,
@@ -117,7 +117,7 @@ public class TransferAuditRepositoryTests
         // Arrange
         var senderAccount = new Account { AccountNumber = "ACC-1" };
         var receiverAccount = new Account { AccountNumber = "ACC-2" };
-        var transfer = new Transfer
+        var transfer = new Transaction
         {
             SenderAccount = senderAccount,
             ReceiverAccount = receiverAccount,

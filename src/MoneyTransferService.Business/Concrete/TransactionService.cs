@@ -10,13 +10,15 @@ using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Concrete;
 
-public class TransferService(
+public class TransactionService(
     IUnitOfWork unitOfWork,
+    ITransactionRepository transactionRepository,
+    IAccountRepository accountRepository,
     IValidator<TransferRequest> transferRequestValidator,
     ITransferBusinessRules transferBusinessRules,
-    ITransferAuditRepository auditRepository) : ITransferService
+    ITransactionAuditRepository auditRepository) : ITransferService
 {
-    public async Task<Transfer> TransferAsync(
+    public async Task<Transaction> TransferAsync(
         Guid senderAccountId,
         Guid receiverAccountId,
         decimal amount,
@@ -36,14 +38,12 @@ public class TransferService(
 
         await ValidateRequestAsync(request, cancellationToken);
 
-        var transferRepository = unitOfWork.GetRepository<Transfer>();
-        Transfer? existingTransfer = await GetExistingTransferAsync(request, transferRepository, cancellationToken);
+        Transaction? existingTransfer = await GetExistingTransferAsync(request, transactionRepository, cancellationToken);
         if (existingTransfer != null)
         {
             return existingTransfer;
         }
 
-        var accountRepository = unitOfWork.GetRepository<Account>();
         var transferAccounts = await GetTransferAccountsAsync(accountRepository, request, cancellationToken);
 
         await EnsureTransferCanBeCompletedAsync(request, transferAccounts);
@@ -54,7 +54,7 @@ public class TransferService(
 
         ApplyTransferBalanceChanges(request, transferAccounts, accountRepository);
 
-        await CompleteTransferAsync(transfer, transferRepository, cancellationToken);
+        await CompleteTransferAsync(transfer, transactionRepository, cancellationToken);
 
         await SaveTransferAsync(request, transferAccounts, transfer, cancellationToken);
 
@@ -63,21 +63,21 @@ public class TransferService(
         return transfer;
     }
 
-    public async Task<Transfer?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Transaction?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await unitOfWork.GetRepository<Transfer>().GetByIdAsync(id, cancellationToken);
+        return await transactionRepository.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task<IEnumerable<Transfer>> GetTransferHistoryAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Transaction>> GetTransferHistoryAsync(CancellationToken cancellationToken = default)
     {
-        var transfers = await unitOfWork.GetRepository<Transfer>().GetAllAsync(cancellationToken);
+        var transfers = await unitOfWork.GetRepository<Transaction>().GetAllAsync(cancellationToken);
         return transfers.OrderByDescending(transfer => transfer.CreatedAt);
     }
 
     private async Task SaveTransferAsync(
         TransferRequest request,
         TransferAccounts transferAccounts,
-        Transfer transfer,
+        Transaction transfer,
         CancellationToken cancellationToken)
     {
         try
@@ -108,11 +108,11 @@ public class TransferService(
         }
     }
 
-    private static async Task CompleteTransferAsync(Transfer transfer, IRepository<Transfer> transferRepository, CancellationToken cancellationToken)
+    private static async Task CompleteTransferAsync(Transaction transfer, IRepository<Transaction> transcationRepository, CancellationToken cancellationToken)
     {
         transfer.Status = TransferStatus.COMPLETED;
         transfer.CompletedAt = DateTimeOffset.UtcNow;
-        await transferRepository.AddAsync(transfer, cancellationToken);
+        await transcationRepository.AddAsync(transfer, cancellationToken);
     }
 
     private async Task EnsureTransferCanBeCompletedAsync(TransferRequest request, TransferAccounts transferAccounts)
@@ -160,10 +160,7 @@ public class TransferService(
         return new TransferAccounts(senderAccount, receiverAccount);
     }
 
-    private static async Task<Transfer?> GetExistingTransferAsync(
-        TransferRequest request,
-        IRepository<Transfer> transferRepository,
-        CancellationToken cancellationToken)
+    private static async Task<Transaction?> GetExistingTransferAsync(TransferRequest request, IRepository<Transaction> transferRepository, CancellationToken cancellationToken)
     {
         var existingTransfers = await transferRepository.GetAllAsync(cancellationToken);
         return existingTransfers.FirstOrDefault(t => t.IdempotencyKey == request.IdempotencyKey);
@@ -187,9 +184,9 @@ public class TransferService(
         accountRepository.Update(transferAccounts.ReceiverAccount);
     }
 
-    private static Transfer CreatePendingTransfer(TransferRequest request, TransferAccounts transferAccounts)
+    private static Transaction CreatePendingTransfer(TransferRequest request, TransferAccounts transferAccounts)
     {
-        return new Transfer
+        return new Transaction
         {
             Amount = request.Amount,
             CurrencyCode = request.CurrencyCode,
@@ -203,14 +200,14 @@ public class TransferService(
         };
     }
 
-    private static Transfer CreateFailedTransfer(
+    private static Transaction CreateFailedTransfer(
         TransferRequest request,
         string failureReason,
         Account? senderAccount = null,
         Account? receiverAccount = null,
         Guid? transferId = null)
     {
-        var transfer = new Transfer
+        var transfer = new Transaction
         {
             Id = transferId ?? Guid.Empty,
             Amount = request.Amount,

@@ -1,11 +1,16 @@
+using System.Net;
+
 namespace MoneyTransferService.Business.Exceptions;
 
-public class InvalidCustomerRequestException : Exception
+public class InvalidCustomerRequestException : BusinessException
 {
-    public InvalidCustomerRequestException(string message) : base(message) { }
+    public InvalidCustomerRequestException(string message) : base(HttpStatusCode.BadRequest, message) { }
 }
 
-public class CustomerCreationException : Exception
+public class CustomerCreationException : BusinessException
 {
-    public CustomerCreationException(string message, Exception? innerException = null) : base(message, innerException) { }
+    public CustomerCreationException(string message, Exception? innerException = null)
+        : base(HttpStatusCode.Conflict, message, innerException)
+    {
+    }
 }
