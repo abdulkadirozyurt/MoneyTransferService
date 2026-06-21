@@ -42,6 +42,17 @@ try
     app.UseMiddleware<CorrelationIdMiddleware>();
 
     app.UseExceptionHandler();
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.EnrichDiagnosticContext = (diagnosticsContext, httpContext) =>
+        {
+            diagnosticsContext.Set("TraceId", httpContext.TraceIdentifier);
+            diagnosticsContext.Set("RequestHost", httpContext.Request.Host.Value);
+            diagnosticsContext.Set("RequestScheme", httpContext.Request.Scheme);
+        };
+    });
 
     // if (app.Environment.IsDevelopment())
     // {
@@ -62,7 +73,7 @@ try
 
     app.Run();
 }
-catch (Exception exception)
+catch (Exception exception) when (exception is not Microsoft.Extensions.Hosting.HostAbortedException)
 {
 
     Log.Fatal(exception, "Application terminated unexpectedly");
