@@ -40,7 +40,7 @@ public static class TransactionEndpoints
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
-        var transaction = await transactionService.GetTransferByIdAsync(id, cancellationToken);
+        var transaction = await transactionService.GetTransactionByIdAsync(id, cancellationToken);
         return transaction is null
             ? Results.NotFound(new { error = "Transaction not found." })
             : Results.Ok(TransactionResponse.FromTransaction(transaction));
@@ -50,7 +50,7 @@ public static class TransactionEndpoints
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
-        var transactions = await transactionService.GetTransferHistoryAsync(cancellationToken);
+        var transactions = await transactionService.GetTransactionHistoryAsync(cancellationToken);
         return Results.Ok(transactions.Select(TransactionResponse.FromTransaction));
     }
 }

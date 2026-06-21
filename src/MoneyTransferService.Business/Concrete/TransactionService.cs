@@ -47,15 +47,15 @@ public class TransactionService(
         return transfer;
     }
 
-    public async Task<Transaction?> GetTransferByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await transactionRepository.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task<IEnumerable<Transaction>> GetTransferHistoryAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(CancellationToken cancellationToken = default)
     {
-        var transfers = await transactionRepository.GetAllAsync(cancellationToken);
-        return transfers.OrderByDescending(transfer => transfer.CreatedAt);
+        var transactions = await transactionRepository.GetAllAsync(cancellationToken);
+        return transactions.OrderByDescending(transaction => transaction.CreatedAt);
     }
 
     private async Task SaveTransferAsync(
