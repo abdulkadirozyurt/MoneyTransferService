@@ -7,17 +7,11 @@ public static class TransferEndpoints
 {
     public static IEndpointRouteBuilder MapTransferEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/transfers")
-            .WithTags("Transfers");
+        var group = app.MapGroup("/transfers").WithTags("Transfers");
 
-        group.MapPost("/", CreateTransferAsync)
-            .WithName("CreateTransfer");
-
-        group.MapGet("/{id:guid}", GetTransferByIdAsync)
-            .WithName("GetTransferById");
-
-        group.MapGet("/history", GetTransferHistoryAsync)
-            .WithName("GetTransferHistory");
+        group.MapPost("/", CreateTransferAsync).WithName("CreateTransfer");
+        group.MapGet("/{id:guid}", GetTransferByIdAsync).WithName("GetTransferById");
+        group.MapGet("/history", GetTransferHistoryAsync).WithName("GetTransferHistory");
 
         return app;
     }

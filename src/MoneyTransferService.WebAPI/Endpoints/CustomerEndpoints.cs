@@ -1,5 +1,4 @@
 using MoneyTransferService.Business.Abstract;
-using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.WebAPI.Contracts;
 
 namespace MoneyTransferService.WebAPI.Endpoints;
@@ -8,28 +7,17 @@ public static class CustomerEndpoints
 {
     public static IEndpointRouteBuilder MapCustomerEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/customers")
-            .WithTags("Customers");
+        var group = app.MapGroup("/customers").WithTags("Customers");
 
         // Individual customer endpoints
-        group.MapPost("/individual", CreateIndividualCustomerAsync)
-            .WithName("CreateIndividualCustomer");
-
-        group.MapGet("/individual", GetIndividualCustomersAsync)
-            .WithName("GetIndividualCustomers");
-
-        group.MapGet("/individual/{id:guid}", GetIndividualCustomerByIdAsync)
-            .WithName("GetIndividualCustomerById");
+        group.MapPost("/individual", CreateIndividualCustomerAsync).WithName("CreateIndividualCustomer");
+        group.MapGet("/individual", GetIndividualCustomersAsync).WithName("GetIndividualCustomers");
+        group.MapGet("/individual/{id:guid}", GetIndividualCustomerByIdAsync).WithName("GetIndividualCustomerById");
 
         // Corporate customer endpoints
-        group.MapPost("/corporate", CreateCorporateCustomerAsync)
-            .WithName("CreateCorporateCustomer");
-
-        group.MapGet("/corporate", GetCorporateCustomersAsync)
-            .WithName("GetCorporateCustomers");
-
-        group.MapGet("/corporate/{id:guid}", GetCorporateCustomerByIdAsync)
-            .WithName("GetCorporateCustomerById");
+        group.MapPost("/corporate", CreateCorporateCustomerAsync).WithName("CreateCorporateCustomer");
+        group.MapGet("/corporate", GetCorporateCustomersAsync).WithName("GetCorporateCustomers");
+        group.MapGet("/corporate/{id:guid}", GetCorporateCustomerByIdAsync).WithName("GetCorporateCustomerById");
 
         return app;
     }
@@ -39,27 +27,16 @@ public static class CustomerEndpoints
         ICustomerService customerService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var customer = await customerService.CreateIndividualCustomerAsync(
-                request.Email,
-                request.PhoneNumber,
-                request.FirstName,
-                request.LastName,
-                request.NationalIdentityNumber,
-                cancellationToken);
+        var customer = await customerService.CreateIndividualCustomerAsync(
+            request.Email,
+            request.PhoneNumber,
+            request.FirstName,
+            request.LastName,
+            request.NationalIdentityNumber,
+            cancellationToken);
 
-            return Results.Created($"/customers/individual/{customer.Id}",
-                CustomerResponse.FromIndividualCustomer(customer));
-        }
-        catch (InvalidCustomerRequestException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
-        catch (CustomerCreationException ex)
-        {
-            return Results.Conflict(new { error = ex.Message });
-        }
+        return Results.Created($"/customers/individual/{customer.Id}",
+            CustomerResponse.FromIndividualCustomer(customer));
     }
 
     private static async Task<IResult> GetIndividualCustomersAsync(
@@ -86,27 +63,16 @@ public static class CustomerEndpoints
         ICustomerService customerService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var customer = await customerService.CreateCorporateCustomerAsync(
-                request.Email,
-                request.PhoneNumber,
-                request.CompanyName,
-                request.TaxNumber,
-                request.TaxOffice,
-                cancellationToken);
+        var customer = await customerService.CreateCorporateCustomerAsync(
+            request.Email,
+            request.PhoneNumber,
+            request.CompanyName,
+            request.TaxNumber,
+            request.TaxOffice,
+            cancellationToken);
 
-            return Results.Created($"/customers/corporate/{customer.Id}",
-                CustomerResponse.FromCorporateCustomer(customer));
-        }
-        catch (InvalidCustomerRequestException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
-        catch (CustomerCreationException ex)
-        {
-            return Results.Conflict(new { error = ex.Message });
-        }
+        return Results.Created($"/customers/corporate/{customer.Id}",
+            CustomerResponse.FromCorporateCustomer(customer));
     }
 
     private static async Task<IResult> GetCorporateCustomersAsync(
