@@ -2,6 +2,7 @@ using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
 using MoneyTransferService.WebAPI.Endpoints;
 using MoneyTransferService.WebAPI.ExceptionHandling;
+using MoneyTransferService.WebAPI.Middlewares;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -37,6 +38,8 @@ try
     builder.Services.AddOpenApi();
 
     var app = builder.Build();
+
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     app.UseExceptionHandler();
 
