@@ -3,37 +3,73 @@ using MoneyTransferService.DataAccess;
 using MoneyTransferService.WebAPI.Endpoints;
 using MoneyTransferService.WebAPI.ExceptionHandling;
 using Scalar.AspNetCore;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>().AddProblemDetails();
+using Serilog;
+using Serilog.Formatting.Compact;
 
 
+Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console(new CompactJsonFormatter())
+                .CreateBootstrapLogger();
 
-builder.Services.RegisterDataAccessServices(builder.Configuration);
-builder.Services.RegisterBusinessServices(builder.Configuration);
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+    builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+    {
+        var mongoConnectionString = context.Configuration.GetConnectionString("MongoDb");
 
-var app = builder.Build();
+        loggerConfiguration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("ApplicationName", "MoneyTransferService.WebAPI")
+            .WriteTo.Console(new CompactJsonFormatter());
 
-app.UseExceptionHandler();
+        loggerConfiguration.WriteTo.MongoDB(mongoConnectionString, "ApplicationLogs");
+    });
 
-// if (app.Environment.IsDevelopment())
-// {
-//     app.MapOpenApi();
-//     app.MapScalarApiReference();    
-// }
 
-app.MapOpenApi();
-app.MapScalarApiReference();
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>().AddProblemDetails();
 
-app.UseHttpsRedirection();
+    builder.Services.RegisterDataAccessServices(builder.Configuration);
+    builder.Services.RegisterBusinessServices(builder.Configuration);
+    builder.Services.AddOpenApi();
 
-var api = app.MapGroup("/api");
+    var app = builder.Build();
 
-api.MapAccountEndpoints();
-api.MapCustomerEndpoints();
-api.MapTransactionEndpoints();
+    app.UseExceptionHandler();
 
-app.Run();
+    // if (app.Environment.IsDevelopment())
+    // {
+    //     app.MapOpenApi();
+    //     app.MapScalarApiReference();    
+    // }
+
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+
+    app.UseHttpsRedirection();
+
+    var api = app.MapGroup("/api");
+
+    api.MapAccountEndpoints();
+    api.MapCustomerEndpoints();
+    api.MapTransactionEndpoints();
+
+    app.Run();
+}
+catch (Exception exception)
+{
+
+    Log.Fatal(exception, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+
+
+
+
