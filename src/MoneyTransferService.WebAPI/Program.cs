@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
 using MoneyTransferService.WebAPI.Endpoints;
 using MoneyTransferService.WebAPI.ExceptionHandling;
 using MoneyTransferService.WebAPI.Middlewares;
+using MongoDB.Driver;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -27,7 +29,10 @@ try
             .Enrich.WithProperty("ApplicationName", "MoneyTransferService.WebAPI")
             .WriteTo.Console(new CompactJsonFormatter());
 
-        loggerConfiguration.WriteTo.MongoDB(mongoConnectionString, "ApplicationLogs");
+        if (!string.IsNullOrEmpty(mongoConnectionString))
+        {
+            loggerConfiguration.WriteTo.MongoDB(mongoConnectionString, collectionName: "ApplicationLogs");
+        }
     });
 
 
@@ -36,6 +41,20 @@ try
     builder.Services.RegisterDataAccessServices(builder.Configuration);
     builder.Services.RegisterBusinessServices(builder.Configuration);
     builder.Services.AddOpenApi();
+
+    var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer");
+    var mongoConnectionString = builder.Configuration.GetConnectionString("MongoDb");
+
+    builder.Services.AddHealthChecks()
+            .AddSqlServer(
+                sqlConnectionString!,
+                name: "SqlServer",
+                timeout: TimeSpan.FromSeconds(3))
+            .AddMongoDb(
+                sp => new MongoClient(mongoConnectionString!),
+                name: "MongoDb",
+                timeout: TimeSpan.FromSeconds(3));
+
 
     var app = builder.Build();
 
@@ -54,7 +73,7 @@ try
     });
 
     app.UseExceptionHandler();
-    
+
 
     // if (app.Environment.IsDevelopment())
     // {
@@ -64,6 +83,18 @@ try
 
     app.MapOpenApi();
     app.MapScalarApiReference();
+
+    // do not check any dependecy, only check whether asp.net core can create response or not
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false
+    });
+
+    // it run all registered health checks above
+    app.MapHealthChecks("/health/ready");
+
+
+
 
     app.UseHttpsRedirection();
 
