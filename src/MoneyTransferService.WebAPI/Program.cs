@@ -19,7 +19,6 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog((context, services, loggerConfiguration) =>
@@ -39,9 +38,7 @@ try
         }
     });
 
-
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>().AddProblemDetails();
-
     builder.Services.RegisterDataAccessServices(builder.Configuration);
     builder.Services.RegisterBusinessServices(builder.Configuration);
     builder.Services.AddOpenApi();
@@ -63,12 +60,13 @@ try
          })
         .WithTracing(tracing =>
         {
-            tracing.AddAspNetCoreInstrumentation(options =>
+            tracing
+            .AddAspNetCoreInstrumentation(options =>
             {
                 options.RecordException = true;
             })
             .AddHttpClientInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation();
+            .AddEntityFrameworkCoreInstrumentation();            
 
             if (openTelemetryConsoleExporterEnabled)
             {
@@ -77,7 +75,10 @@ try
 
             if (openTelemetryOtlpExporterEnabled)
             {
-                tracing.AddOtlpExporter();
+                tracing.AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri("http://localhost:4317");
+                });
             }
         })
         .WithMetrics(metrics =>
@@ -148,9 +149,6 @@ try
 
     // it run all registered health checks above
     app.MapHealthChecks("/health/ready");
-
-
-
 
     app.UseHttpsRedirection();
 

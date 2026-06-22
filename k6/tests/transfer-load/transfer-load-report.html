@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transfer Load — Hot Account Contention</title>
+  <style>
+    :root { color-scheme: light; --bg:#eef3fb; --panel:#ffffff; --text:#172033; --muted:#64748b; --line:#dbe3ef; --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --shadow:0 10px 30px rgba(15,23,42,.08); }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color:var(--text); background: radial-gradient(circle at top left, #dbeafe 0, transparent 34rem), var(--bg); }
+    .toolbar { position: sticky; top:0; z-index:20; display:flex; justify-content:flex-end; gap:8px; padding:10px 18px; background:rgba(238,243,251,.82); backdrop-filter: blur(10px); border-bottom:1px solid var(--line); }
+    .toolbar button { border:1px solid var(--line); background:white; color:var(--text); border-radius:999px; padding:8px 14px; cursor:pointer; font-weight:700; }
+    .toolbar button.active { background:var(--blue); color:white; border-color:var(--blue); }
+    .lang-panel { display:none; min-height:100vh; }
+    .lang-panel.active { display:grid; grid-template-columns:240px 1fr; }
+    .sidebar { position:sticky; top:49px; height:calc(100vh - 49px); padding:24px 18px; border-right:1px solid var(--line); background:rgba(255,255,255,.72); backdrop-filter: blur(10px); }
+    .brand { font-weight:900; font-size:20px; margin-bottom:24px; letter-spacing:-.03em; }
+    nav { display:flex; flex-direction:column; gap:8px; }
+    nav a { text-decoration:none; color:var(--muted); padding:10px 12px; border-radius:10px; font-weight:700; }
+    nav a:hover { background:#eaf1ff; color:var(--blue); }
+    .content { width:100%; max-width: none; padding:24px; }
+    .hero { display:grid; grid-template-columns:1fr 360px; gap:18px; align-items:stretch; margin-bottom:18px; }
+    .hero > div:first-child, .verdict-card, .panel, .metric-card, .counter-card { background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); }
+    .hero > div:first-child { padding:26px; }
+    .eyebrow { color:var(--blue); font-weight:900; text-transform:uppercase; font-size:12px; letter-spacing:.12em; }
+    h1 { margin:8px 0 10px; font-size:clamp(28px,4vw,48px); letter-spacing:-.05em; line-height:1.02; }
+    h2 { margin:0 0 14px; font-size:18px; letter-spacing:-.02em; }
+    p { color:var(--muted); line-height:1.55; margin:0; }
+    .verdict-card { padding:24px; display:flex; flex-direction:column; justify-content:center; border-left:8px solid var(--green); }
+    .verdict-card.fail { border-left-color:var(--red); }
+    .verdict-card span { color:var(--muted); font-weight:800; text-transform:uppercase; font-size:12px; }
+    .verdict-card strong { font-size:44px; letter-spacing:-.06em; color:var(--green); }
+    .verdict-card.fail strong { color:var(--red); }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .metric-card { padding:18px; min-height:142px; }
+    .metric-card.good { border-top:4px solid var(--green); }
+    .metric-card.warn { border-top:4px solid var(--amber); }
+    .metric-label, .counter-name { color:var(--muted); font-size:12px; text-transform:uppercase; font-weight:900; letter-spacing:.08em; }
+    .metric-value, .counter-value { font-size:30px; font-weight:950; letter-spacing:-.05em; margin:8px 0; }
+    .panel { padding:20px; margin-bottom:18px; }
+    .panel.compact { padding:16px 20px; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .counter-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+    .counter-card { padding:16px; min-height:130px; }
+    .table-wrap { overflow:auto; max-height:360px; border:1px solid var(--line); border-radius:12px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { position:sticky; top:0; background:#f8fafc; z-index:1; color:#334155; }
+    code { background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 5px; border-radius:6px; }
+    .pill { display:inline-block; border-radius:999px; padding:4px 9px; font-weight:900; font-size:12px; }
+    .pill.pass { background:#dcfce7; color:#166534; }
+    .pill.fail { background:#fee2e2; color:#991b1b; }
+    .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; background:var(--green); }
+    .bad-dot { background:var(--red); }
+    .dense-list { margin:0; padding-left:18px; color:var(--muted); line-height:1.55; }
+    .empty { color:var(--muted); padding:20px; }
+    @media (max-width: 1180px) { .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .counter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .hero { grid-template-columns:1fr; } }
+    @media (max-width: 820px) { .lang-panel.active { display:block; } .sidebar { position:relative; top:0; height:auto; border-right:0; border-bottom:1px solid var(--line); } nav { flex-direction:row; flex-wrap:wrap; } .content { padding:14px; } .two-col { grid-template-columns:1fr; } .metric-grid { grid-template-columns:1fr; } .counter-grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width: 520px) { .counter-grid { grid-template-columns:1fr; } .toolbar { justify-content:center; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar"><button class="active" data-switch="en">English</button><button data-switch="tr">Türkçe</button></div>
+  <div class="lang-panel" data-lang="en">
+    <aside class="sidebar">
+      <div class="brand">k6 Report</div>
+      <nav>
+        <a href="#en-overview">Overview</a>
+        <a href="#en-details">Details</a>
+        <a href="#en-checks">Checks</a>
+        <a href="#en-counters">Status counters</a>
+        <a href="#en-next">Next action</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="hero" id="en-overview">
+        <div>
+          <div class="eyebrow">Language: EN</div>
+          <h1>Transfer Load — Hot Account Contention</h1>
+          <p>Sends concurrent transfers from one sender to one receiver. It intentionally creates contention to verify consistency, optimistic concurrency, server errors, and latency.</p>
+        </div>
+        <div class="verdict-card fail">
+          <span>Verdict</span>
+          <strong>FAIL</strong>
+          <p>Failed checks or 500 responses exist. Inspect ApplicationLogs with k6 correlation ids.</p>
+        </div>
+      </header>
+
+      <section class="metric-grid" aria-label="Dashboard">
+        <article class="metric-card neutral">
+    <div class="metric-label">Total requests</div>
+    <div class="metric-value">1017</div>
+    <p>All HTTP requests sent during this run.</p>
+  </article>
+<article class="metric-card warn">
+    <div class="metric-label">HTTP fail rate</div>
+    <div class="metric-value">89.77%</div>
+    <p>k6 marks 4xx/5xx as failed. Expected 409 conflicts may make this high.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">p95 latency</div>
+    <div class="metric-value">209.45 ms</div>
+    <p>95% of requests completed below this value.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Average latency</div>
+    <div class="metric-value">216.22 ms</div>
+    <p>Mean response time across requests.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Max latency</div>
+    <div class="metric-value">7809.43 ms</div>
+    <p>Slowest observed request.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Iterations</div>
+    <div class="metric-value">1017</div>
+    <p>Completed scenario iterations.</p>
+  </article>
+        <article class="metric-card neutral">
+    <div class="metric-label">Successful transfers</div>
+    <div class="metric-value">104</div>
+    <p>Accepted transfers. Balance delta must equal this count.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Expected conflicts</div>
+    <div class="metric-value">912</div>
+    <p>Optimistic concurrency conflicts from the single sender account.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Success rate</div>
+    <div class="metric-value">10.23%</div>
+    <p>Accepted transfers / total iterations.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Conflict rate</div>
+    <div class="metric-value">89.68%</div>
+    <p>409 conflicts / total iterations.</p>
+  </article>
+      </section>
+
+      <section class="panel compact">
+        <h2>How to read</h2>
+        <ul class="dense-list"><li>201 means money moved successfully once.</li>
+<li>409 means expected optimistic concurrency conflict on the hot sender account.</li>
+<li>500 is a real server failure and must stay at 0.</li>
+<li>http_req_failed can be high because k6 treats 409 as failed HTTP, even if business behavior is correct.</li>
+<li>p95 below 500ms is the current latency target.</li></ul>
+      </section>
+
+      <section class="two-col" id="en-details">
+        <article class="panel">
+          <h2>Checks</h2>
+          <div class="table-wrap"><table><thead><tr><th>Check</th><th>Pass %</th><th>Passed</th><th>Failed</th><th>Meaning</th></tr></thead><tbody><tr>
+      <td><span class="dot bad-dot"></span>transfer success or expected conflict</td>
+      <td><strong>99.90%</strong></td>
+      <td>1016</td>
+      <td>1</td>
+      <td>Accepts completed transfer or expected 409 conflict. Other statuses are suspicious.</td>
+    </tr>
+<tr>
+      <td><span class="dot bad-dot"></span>transfer did not fail with 500</td>
+      <td><strong>99.90%</strong></td>
+      <td>1016</td>
+      <td>1</td>
+      <td>API must not produce server errors.</td>
+    </tr></tbody></table></div>
+        </article>
+        <article class="panel">
+          <h2>Thresholds</h2>
+          <div class="table-wrap"><table><thead><tr><th>Metric</th><th>Rule</th><th>Status</th><th>Meaning</th></tr></thead><tbody><tr>
+        <td>http_req_duration</td>
+        <td><code>p(95)&lt;500</code></td>
+        <td><span class="pill pass">PASS</span></td>
+        <td>95% of requests should complete below 500ms.</td>
+      </tr></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="panel" id="en-counters">
+        <h2>Status counters</h2>
+        <div class="counter-grid"><article class="counter-card">
+    <div class="counter-name">status_200</div>
+    <div class="counter-value">0</div>
+    <p>HTTP 200 responses. Usually not expected for create-transfer.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_201</div>
+    <div class="counter-value">104</div>
+    <p>Successful transfers. Each should move exactly 1 TRY.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_400</div>
+    <div class="counter-value">0</div>
+    <p>Bad request or validation error. Unexpected in seeded test.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_409</div>
+    <div class="counter-value">912</div>
+    <p>Expected optimistic concurrency conflict from hot-account writes.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_500</div>
+    <div class="counter-value">1</div>
+    <p>Server failure. Must be 0.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_other</div>
+    <div class="counter-value">0</div>
+    <p>Untracked status. Investigate if non-zero.</p>
+  </article></div>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <h2>Metric details</h2>
+          <div class="table-wrap"><table><thead><tr><th>Metric</th><th>Value</th><th>Explanation</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>1017</strong></td><td>Total HTTP requests sent by k6.</td></tr>
+<tr><td>http_req_failed</td><td><strong>89.77%</strong></td><td>Non-2xx/3xx response ratio from k6 perspective.</td></tr>
+<tr><td>http_req_duration avg</td><td><strong>216.22 ms</strong></td><td>Average response time.</td></tr>
+<tr><td>http_req_duration med</td><td><strong>136.04 ms</strong></td><td>Median response time.</td></tr>
+<tr><td>http_req_duration p90</td><td><strong>197.15 ms</strong></td><td>90th percentile latency.</td></tr>
+<tr><td>http_req_duration p95</td><td><strong>209.45 ms</strong></td><td>95th percentile latency.</td></tr>
+<tr><td>http_req_duration max</td><td><strong>7809.43 ms</strong></td><td>Slowest request.</td></tr>
+<tr><td>iterations</td><td><strong>1017</strong></td><td>Completed scenario iterations.</td></tr>
+<tr><td>[object Object]</td><td><strong>104</strong></td><td>Accepted transfers. Balance delta must equal this count.</td></tr>
+<tr><td>[object Object]</td><td><strong>912</strong></td><td>Optimistic concurrency conflicts from the single sender account.</td></tr>
+<tr><td>[object Object]</td><td><strong>10.23%</strong></td><td>Accepted transfers / total iterations.</td></tr>
+<tr><td>[object Object]</td><td><strong>89.68%</strong></td><td>409 conflicts / total iterations.</td></tr></tbody></table></div>
+        </article>
+        <article class="panel" id="en-next">
+          <h2>Interpretation</h2>
+          <ul class="dense-list"><li>104 transfers were accepted. Sender must decrease and receiver must increase by this amount.</li>
+<li>912 requests returned 409. This usually means consistency protection worked under contention.</li>
+<li>1 requests returned 500. This must remain 0.</li></ul>
+          <h2>Next action</h2>
+          <p>Investigate 500 errors in ApplicationLogs using k6 correlation ids.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+  <div class="lang-panel" data-lang="tr">
+    <aside class="sidebar">
+      <div class="brand">k6 Report</div>
+      <nav>
+        <a href="#tr-overview">Özet</a>
+        <a href="#tr-details">Detay</a>
+        <a href="#tr-checks">Kontroller</a>
+        <a href="#tr-counters">Durum sayaçları</a>
+        <a href="#tr-next">Sonraki aksiyon</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="hero" id="tr-overview">
+        <div>
+          <div class="eyebrow">Dil: TR</div>
+          <h1>Transfer Load — Yoğun Hesap Çakışması</h1>
+          <p>Tek gönderici hesaptan tek alıcı hesaba eş zamanlı transfer gönderir. Tutarlılık, optimistic concurrency, server hataları ve gecikmeyi ölçmek için kasıtlı çakışma üretir.</p>
+        </div>
+        <div class="verdict-card fail">
+          <span>Karar</span>
+          <strong>FAIL</strong>
+          <p>Failed check veya 500 response var. k6 correlation id ile ApplicationLogs incelenmeli.</p>
+        </div>
+      </header>
+
+      <section class="metric-grid" aria-label="Dashboard">
+        <article class="metric-card neutral">
+    <div class="metric-label">Toplam istek</div>
+    <div class="metric-value">1017</div>
+    <p>Bu koşuda gönderilen tüm HTTP istekleri.</p>
+  </article>
+<article class="metric-card warn">
+    <div class="metric-label">HTTP hata oranı</div>
+    <div class="metric-value">89.77%</div>
+    <p>k6 4xx/5xx cevapları failed sayar. Beklenen 409 conflict bu oranı yükseltebilir.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">p95 gecikme</div>
+    <div class="metric-value">209.45 ms</div>
+    <p>İsteklerin %95&#039;i bu sürenin altında tamamlandı.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Ortalama gecikme</div>
+    <div class="metric-value">216.22 ms</div>
+    <p>Tüm isteklerin ortalama cevap süresi.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Maks gecikme</div>
+    <div class="metric-value">7809.43 ms</div>
+    <p>Gözlenen en yavaş istek.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Iterasyon</div>
+    <div class="metric-value">1017</div>
+    <p>Tamamlanan senaryo iterasyonu.</p>
+  </article>
+        <article class="metric-card neutral">
+    <div class="metric-label">Başarılı transfer</div>
+    <div class="metric-value">104</div>
+    <p>Kabul edilen transferler. Bakiye değişimi bu sayıya eşit olmalı.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Beklenen conflict</div>
+    <div class="metric-value">912</div>
+    <p>Tek sender account kaynaklı optimistic concurrency conflict sayısı.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Başarı oranı</div>
+    <div class="metric-value">10.23%</div>
+    <p>Kabul edilen transfer / toplam iterasyon.</p>
+  </article>
+<article class="metric-card neutral">
+    <div class="metric-label">Conflict oranı</div>
+    <div class="metric-value">89.68%</div>
+    <p>409 conflict / toplam iterasyon.</p>
+  </article>
+      </section>
+
+      <section class="panel compact">
+        <h2>Nasıl okunur</h2>
+        <ul class="dense-list"><li>201 paranın bir kez başarıyla taşındığı anlamına gelir.</li>
+<li>409 hot sender account üzerinde beklenen optimistic concurrency conflict anlamına gelir.</li>
+<li>500 gerçek server hatasıdır ve 0 kalmalıdır.</li>
+<li>k6 409&#039;u HTTP failed saydığı için http_req_failed yüksek olabilir; bu business davranışı doğru olsa bile olur.</li>
+<li>p95 değerinin 500ms altında kalması mevcut gecikme hedefidir.</li></ul>
+      </section>
+
+      <section class="two-col" id="tr-details">
+        <article class="panel">
+          <h2>Kontroller</h2>
+          <div class="table-wrap"><table><thead><tr><th>Check</th><th>Pass %</th><th>Başarılı</th><th>Başarısız</th><th>Anlamı</th></tr></thead><tbody><tr>
+      <td><span class="dot bad-dot"></span>transfer success or expected conflict</td>
+      <td><strong>99.90%</strong></td>
+      <td>1016</td>
+      <td>1</td>
+      <td>Tamamlanan transfer veya beklenen 409 conflict kabul edilir. Diğer status&#039;lar şüphelidir.</td>
+    </tr>
+<tr>
+      <td><span class="dot bad-dot"></span>transfer did not fail with 500</td>
+      <td><strong>99.90%</strong></td>
+      <td>1016</td>
+      <td>1</td>
+      <td>API server hatası üretmemelidir.</td>
+    </tr></tbody></table></div>
+        </article>
+        <article class="panel">
+          <h2>Eşikler</h2>
+          <div class="table-wrap"><table><thead><tr><th>Metrik</th><th>Kural</th><th>Durum</th><th>Anlamı</th></tr></thead><tbody><tr>
+        <td>http_req_duration</td>
+        <td><code>p(95)&lt;500</code></td>
+        <td><span class="pill pass">PASS</span></td>
+        <td>İsteklerin %95&#039;i 500ms altında tamamlanmalıdır.</td>
+      </tr></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="panel" id="tr-counters">
+        <h2>Durum sayaçları</h2>
+        <div class="counter-grid"><article class="counter-card">
+    <div class="counter-name">status_200</div>
+    <div class="counter-value">0</div>
+    <p>HTTP 200 cevapları. Create-transfer için genelde beklenmez.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_201</div>
+    <div class="counter-value">104</div>
+    <p>Başarılı transferler. Her biri tam 1 TRY taşımalıdır.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_400</div>
+    <div class="counter-value">0</div>
+    <p>Bad request veya validation hatası. Seed&#039;li testte beklenmez.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_409</div>
+    <div class="counter-value">912</div>
+    <p>Hot-account yazımlarından beklenen optimistic concurrency conflict.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_500</div>
+    <div class="counter-value">1</div>
+    <p>Server hatası. 0 olmalıdır.</p>
+  </article>
+<article class="counter-card">
+    <div class="counter-name">status_other</div>
+    <div class="counter-value">0</div>
+    <p>Takip edilmeyen status. 0 değilse incelenmeli.</p>
+  </article></div>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <h2>Metrik details</h2>
+          <div class="table-wrap"><table><thead><tr><th>Metrik</th><th>Değer</th><th>Açıklama</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>1017</strong></td><td>k6 tarafından gönderilen toplam HTTP isteği.</td></tr>
+<tr><td>http_req_failed</td><td><strong>89.77%</strong></td><td>k6 açısından 2xx/3xx dışı cevap oranı.</td></tr>
+<tr><td>http_req_duration avg</td><td><strong>216.22 ms</strong></td><td>Ortalama cevap süresi.</td></tr>
+<tr><td>http_req_duration med</td><td><strong>136.04 ms</strong></td><td>Ortanca cevap süresi.</td></tr>
+<tr><td>http_req_duration p90</td><td><strong>197.15 ms</strong></td><td>90. yüzdelik gecikme.</td></tr>
+<tr><td>http_req_duration p95</td><td><strong>209.45 ms</strong></td><td>95. yüzdelik gecikme.</td></tr>
+<tr><td>http_req_duration max</td><td><strong>7809.43 ms</strong></td><td>En yavaş istek.</td></tr>
+<tr><td>iterations</td><td><strong>1017</strong></td><td>Tamamlanan senaryo iterasyonu.</td></tr>
+<tr><td>[object Object]</td><td><strong>104</strong></td><td>Kabul edilen transferler. Bakiye değişimi bu sayıya eşit olmalı.</td></tr>
+<tr><td>[object Object]</td><td><strong>912</strong></td><td>Tek sender account kaynaklı optimistic concurrency conflict sayısı.</td></tr>
+<tr><td>[object Object]</td><td><strong>10.23%</strong></td><td>Kabul edilen transfer / toplam iterasyon.</td></tr>
+<tr><td>[object Object]</td><td><strong>89.68%</strong></td><td>409 conflict / toplam iterasyon.</td></tr></tbody></table></div>
+        </article>
+        <article class="panel" id="tr-next">
+          <h2>Yorum</h2>
+          <ul class="dense-list"><li>104 transfer kabul edildi. Sender bu kadar azalmalı, receiver bu kadar artmalı.</li>
+<li>912 istek 409 döndü. Bu genelde çakışma altında tutarlılık koruması çalıştı demektir.</li>
+<li>1 istek 500 döndü. Bu 0 kalmalıdır.</li></ul>
+          <h2>Sonraki aksiyon</h2>
+          <p>500 hatalarını k6 correlation id ile ApplicationLogs içinde incele.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script>
+    const buttons = document.querySelectorAll('[data-switch]');
+    const panels = document.querySelectorAll('.lang-panel');
+    function setLang(lang) {
+      buttons.forEach((button) => button.classList.toggle('active', button.dataset.switch === lang));
+      panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.lang === lang));
+      document.documentElement.lang = lang;
+    }
+    buttons.forEach((button) => button.addEventListener('click', () => setLang(button.dataset.switch)));
+    setLang('en');
+  </script>
+</body>
+</html>
