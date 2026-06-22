@@ -5,6 +5,9 @@ using MoneyTransferService.WebAPI.Endpoints;
 using MoneyTransferService.WebAPI.ExceptionHandling;
 using MoneyTransferService.WebAPI.Middlewares;
 using MongoDB.Driver;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -16,6 +19,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Host.UseSerilog((context, services, loggerConfiguration) =>
@@ -41,6 +45,58 @@ try
     builder.Services.RegisterDataAccessServices(builder.Configuration);
     builder.Services.RegisterBusinessServices(builder.Configuration);
     builder.Services.AddOpenApi();
+
+    var openTelemetryConsoleExporterEnabled =
+        builder.Configuration.GetValue<bool>("OpenTelemetry:ConsoleExporterEnabled");
+
+    var openTelemetryOtlpExporterEnabled =
+        builder.Configuration.GetValue<bool>("OpenTelemetry:OtlpExporterEnabled");
+
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource =>
+         {
+             resource.AddService(
+                 serviceName: builder.Environment.ApplicationName,
+                 serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+                 serviceInstanceId: Environment.MachineName
+             );
+         })
+        .WithTracing(tracing =>
+        {
+            tracing.AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation();
+
+            if (openTelemetryConsoleExporterEnabled)
+            {
+                tracing.AddConsoleExporter();
+            }
+
+            if (openTelemetryOtlpExporterEnabled)
+            {
+                tracing.AddOtlpExporter();
+            }
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddRuntimeInstrumentation();
+
+            if (openTelemetryConsoleExporterEnabled)
+            {
+                metrics.AddConsoleExporter();
+            }
+
+            if (openTelemetryOtlpExporterEnabled)
+            {
+                metrics.AddOtlpExporter();
+            }
+        });
 
     var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer");
     var mongoConnectionString = builder.Configuration.GetConnectionString("MongoDb");
