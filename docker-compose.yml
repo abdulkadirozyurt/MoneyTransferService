@@ -9,6 +9,12 @@ services:
     environment:
       - ConnectionStrings__SqlServer=${SQLSERVER_CONNECTION_STRING}
       - ConnectionStrings__MongoDb=${MONGODB_CONNECTION_STRING}
+      - OpenTelemetry__OtlpExporterEnabled=true
+      - OpenTelemetry__OtlpTraceEndpoint=http://tempo:4317
+      - OpenTelemetry__OtlpMetricsEndpoint=http://prometheus:9090/api/v1/otlp/v1/metrics
+      - OTEL_SERVICE_NAME=money-transfer-api
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp/v1/metrics
+      - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -16,6 +22,10 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
       interval: 15s
@@ -77,6 +87,84 @@ services:
     volumes:
       - mongodb-data:/data/db
 
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: money-transfer-tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - money-transfer-network
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: money-transfer-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-otlp-receiver"
+    ports:
+      - "9090:9090"
+    networks:
+      - money-transfer-network
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+
+  loki:
+    image: grafana/loki:latest
+    container_name: money-transfer-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+    networks:
+      - money-transfer-network
+    volumes:
+      - loki-data:/loki
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: money-transfer-alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    ports:
+      - "12345:12345"
+    networks:
+      - money-transfer-network
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock
+      - alloy-data:/var/lib/alloy/data
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: money-transfer-grafana
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    networks:
+      - money-transfer-network
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+
 networks:
   money-transfer-network:
     driver: bridge
@@ -84,3 +172,8 @@ networks:
 volumes:
   sqlserver-data:
   mongodb-data:
+  tempo-data:
+  prometheus-data:
+  loki-data:
+  alloy-data:
+  grafana-data:

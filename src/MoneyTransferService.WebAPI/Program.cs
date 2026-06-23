@@ -52,6 +52,9 @@ try
     var openTelemetryOtlpTraceEndpoint =
         builder.Configuration.GetValue<string>("OpenTelemetry:OtlpTraceEndpoint") ?? "http://localhost:4317";
 
+    var openTelemetryOtlpMetricsEndpoint =
+        builder.Configuration.GetValue<string>("OpenTelemetry:OtlpMetricsEndpoint") ?? "http://localhost:9090/api/v1/otlp/v1/metrics";
+
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource =>
          {
@@ -76,7 +79,6 @@ try
                 tracing.AddConsoleExporter();
             }
 
-
             if (openTelemetryOtlpExporterEnabled)
             {
                 tracing.AddOtlpExporter(options =>
@@ -99,7 +101,11 @@ try
 
             if (openTelemetryOtlpExporterEnabled)
             {
-                metrics.AddOtlpExporter();
+                metrics.AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(openTelemetryOtlpMetricsEndpoint);
+                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                });
             }
         });
 

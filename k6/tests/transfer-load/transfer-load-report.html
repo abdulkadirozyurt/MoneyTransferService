@@ -91,52 +91,52 @@
       <section class="metric-grid" aria-label="Dashboard">
         <article class="metric-card neutral">
     <div class="metric-label">Total requests</div>
-    <div class="metric-value">1017</div>
+    <div class="metric-value">45743</div>
     <p>All HTTP requests sent during this run.</p>
   </article>
 <article class="metric-card warn">
     <div class="metric-label">HTTP fail rate</div>
-    <div class="metric-value">89.77%</div>
+    <div class="metric-value">100.00%</div>
     <p>k6 marks 4xx/5xx as failed. Expected 409 conflicts may make this high.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">p95 latency</div>
-    <div class="metric-value">209.45 ms</div>
+    <div class="metric-value">8.27 ms</div>
     <p>95% of requests completed below this value.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Average latency</div>
-    <div class="metric-value">216.22 ms</div>
+    <div class="metric-value">4.23 ms</div>
     <p>Mean response time across requests.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Max latency</div>
-    <div class="metric-value">7809.43 ms</div>
+    <div class="metric-value">108.48 ms</div>
     <p>Slowest observed request.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Iterations</div>
-    <div class="metric-value">1017</div>
+    <div class="metric-value">45743</div>
     <p>Completed scenario iterations.</p>
   </article>
         <article class="metric-card neutral">
     <div class="metric-label">Successful transfers</div>
-    <div class="metric-value">104</div>
+    <div class="metric-value">0</div>
     <p>Accepted transfers. Balance delta must equal this count.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Expected conflicts</div>
-    <div class="metric-value">912</div>
+    <div class="metric-value">0</div>
     <p>Optimistic concurrency conflicts from the single sender account.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Success rate</div>
-    <div class="metric-value">10.23%</div>
+    <div class="metric-value">0.00%</div>
     <p>Accepted transfers / total iterations.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Conflict rate</div>
-    <div class="metric-value">89.68%</div>
+    <div class="metric-value">0.00%</div>
     <p>409 conflicts / total iterations.</p>
   </article>
       </section>
@@ -155,16 +155,16 @@
           <h2>Checks</h2>
           <div class="table-wrap"><table><thead><tr><th>Check</th><th>Pass %</th><th>Passed</th><th>Failed</th><th>Meaning</th></tr></thead><tbody><tr>
       <td><span class="dot bad-dot"></span>transfer success or expected conflict</td>
-      <td><strong>99.90%</strong></td>
-      <td>1016</td>
-      <td>1</td>
+      <td><strong>0.00%</strong></td>
+      <td>0</td>
+      <td>45743</td>
       <td>Accepts completed transfer or expected 409 conflict. Other statuses are suspicious.</td>
     </tr>
 <tr>
-      <td><span class="dot bad-dot"></span>transfer did not fail with 500</td>
-      <td><strong>99.90%</strong></td>
-      <td>1016</td>
-      <td>1</td>
+      <td><span class="dot good"></span>transfer did not fail with 500</td>
+      <td><strong>100.00%</strong></td>
+      <td>45743</td>
+      <td>0</td>
       <td>API must not produce server errors.</td>
     </tr></tbody></table></div>
         </article>
@@ -188,7 +188,7 @@
   </article>
 <article class="counter-card">
     <div class="counter-name">status_201</div>
-    <div class="counter-value">104</div>
+    <div class="counter-value">0</div>
     <p>Successful transfers. Each should move exactly 1 TRY.</p>
   </article>
 <article class="counter-card">
@@ -198,17 +198,17 @@
   </article>
 <article class="counter-card">
     <div class="counter-name">status_409</div>
-    <div class="counter-value">912</div>
+    <div class="counter-value">0</div>
     <p>Expected optimistic concurrency conflict from hot-account writes.</p>
   </article>
 <article class="counter-card">
     <div class="counter-name">status_500</div>
-    <div class="counter-value">1</div>
+    <div class="counter-value">0</div>
     <p>Server failure. Must be 0.</p>
   </article>
 <article class="counter-card">
     <div class="counter-name">status_other</div>
-    <div class="counter-value">0</div>
+    <div class="counter-value">45743</div>
     <p>Untracked status. Investigate if non-zero.</p>
   </article></div>
       </section>
@@ -216,26 +216,26 @@
       <section class="two-col">
         <article class="panel">
           <h2>Metric details</h2>
-          <div class="table-wrap"><table><thead><tr><th>Metric</th><th>Value</th><th>Explanation</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>1017</strong></td><td>Total HTTP requests sent by k6.</td></tr>
-<tr><td>http_req_failed</td><td><strong>89.77%</strong></td><td>Non-2xx/3xx response ratio from k6 perspective.</td></tr>
-<tr><td>http_req_duration avg</td><td><strong>216.22 ms</strong></td><td>Average response time.</td></tr>
-<tr><td>http_req_duration med</td><td><strong>136.04 ms</strong></td><td>Median response time.</td></tr>
-<tr><td>http_req_duration p90</td><td><strong>197.15 ms</strong></td><td>90th percentile latency.</td></tr>
-<tr><td>http_req_duration p95</td><td><strong>209.45 ms</strong></td><td>95th percentile latency.</td></tr>
-<tr><td>http_req_duration max</td><td><strong>7809.43 ms</strong></td><td>Slowest request.</td></tr>
-<tr><td>iterations</td><td><strong>1017</strong></td><td>Completed scenario iterations.</td></tr>
-<tr><td>[object Object]</td><td><strong>104</strong></td><td>Accepted transfers. Balance delta must equal this count.</td></tr>
-<tr><td>[object Object]</td><td><strong>912</strong></td><td>Optimistic concurrency conflicts from the single sender account.</td></tr>
-<tr><td>[object Object]</td><td><strong>10.23%</strong></td><td>Accepted transfers / total iterations.</td></tr>
-<tr><td>[object Object]</td><td><strong>89.68%</strong></td><td>409 conflicts / total iterations.</td></tr></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Metric</th><th>Value</th><th>Explanation</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>45743</strong></td><td>Total HTTP requests sent by k6.</td></tr>
+<tr><td>http_req_failed</td><td><strong>100.00%</strong></td><td>Non-2xx/3xx response ratio from k6 perspective.</td></tr>
+<tr><td>http_req_duration avg</td><td><strong>4.23 ms</strong></td><td>Average response time.</td></tr>
+<tr><td>http_req_duration med</td><td><strong>3.31 ms</strong></td><td>Median response time.</td></tr>
+<tr><td>http_req_duration p90</td><td><strong>5.86 ms</strong></td><td>90th percentile latency.</td></tr>
+<tr><td>http_req_duration p95</td><td><strong>8.27 ms</strong></td><td>95th percentile latency.</td></tr>
+<tr><td>http_req_duration max</td><td><strong>108.48 ms</strong></td><td>Slowest request.</td></tr>
+<tr><td>iterations</td><td><strong>45743</strong></td><td>Completed scenario iterations.</td></tr>
+<tr><td>[object Object]</td><td><strong>0</strong></td><td>Accepted transfers. Balance delta must equal this count.</td></tr>
+<tr><td>[object Object]</td><td><strong>0</strong></td><td>Optimistic concurrency conflicts from the single sender account.</td></tr>
+<tr><td>[object Object]</td><td><strong>0.00%</strong></td><td>Accepted transfers / total iterations.</td></tr>
+<tr><td>[object Object]</td><td><strong>0.00%</strong></td><td>409 conflicts / total iterations.</td></tr></tbody></table></div>
         </article>
         <article class="panel" id="en-next">
           <h2>Interpretation</h2>
-          <ul class="dense-list"><li>104 transfers were accepted. Sender must decrease and receiver must increase by this amount.</li>
-<li>912 requests returned 409. This usually means consistency protection worked under contention.</li>
-<li>1 requests returned 500. This must remain 0.</li></ul>
+          <ul class="dense-list"><li>0 transfers were accepted. Sender must decrease and receiver must increase by this amount.</li>
+<li>0 requests returned 409. This usually means consistency protection worked under contention.</li>
+<li>0 requests returned 500. This must remain 0.</li></ul>
           <h2>Next action</h2>
-          <p>Investigate 500 errors in ApplicationLogs using k6 correlation ids.</p>
+          <p>Next: create a multi-account load test to measure throughput with less contention.</p>
         </article>
       </section>
     </main>
@@ -269,52 +269,52 @@
       <section class="metric-grid" aria-label="Dashboard">
         <article class="metric-card neutral">
     <div class="metric-label">Toplam istek</div>
-    <div class="metric-value">1017</div>
+    <div class="metric-value">45743</div>
     <p>Bu koşuda gönderilen tüm HTTP istekleri.</p>
   </article>
 <article class="metric-card warn">
     <div class="metric-label">HTTP hata oranı</div>
-    <div class="metric-value">89.77%</div>
+    <div class="metric-value">100.00%</div>
     <p>k6 4xx/5xx cevapları failed sayar. Beklenen 409 conflict bu oranı yükseltebilir.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">p95 gecikme</div>
-    <div class="metric-value">209.45 ms</div>
+    <div class="metric-value">8.27 ms</div>
     <p>İsteklerin %95&#039;i bu sürenin altında tamamlandı.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Ortalama gecikme</div>
-    <div class="metric-value">216.22 ms</div>
+    <div class="metric-value">4.23 ms</div>
     <p>Tüm isteklerin ortalama cevap süresi.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Maks gecikme</div>
-    <div class="metric-value">7809.43 ms</div>
+    <div class="metric-value">108.48 ms</div>
     <p>Gözlenen en yavaş istek.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Iterasyon</div>
-    <div class="metric-value">1017</div>
+    <div class="metric-value">45743</div>
     <p>Tamamlanan senaryo iterasyonu.</p>
   </article>
         <article class="metric-card neutral">
     <div class="metric-label">Başarılı transfer</div>
-    <div class="metric-value">104</div>
+    <div class="metric-value">0</div>
     <p>Kabul edilen transferler. Bakiye değişimi bu sayıya eşit olmalı.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Beklenen conflict</div>
-    <div class="metric-value">912</div>
+    <div class="metric-value">0</div>
     <p>Tek sender account kaynaklı optimistic concurrency conflict sayısı.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Başarı oranı</div>
-    <div class="metric-value">10.23%</div>
+    <div class="metric-value">0.00%</div>
     <p>Kabul edilen transfer / toplam iterasyon.</p>
   </article>
 <article class="metric-card neutral">
     <div class="metric-label">Conflict oranı</div>
-    <div class="metric-value">89.68%</div>
+    <div class="metric-value">0.00%</div>
     <p>409 conflict / toplam iterasyon.</p>
   </article>
       </section>
@@ -333,16 +333,16 @@
           <h2>Kontroller</h2>
           <div class="table-wrap"><table><thead><tr><th>Check</th><th>Pass %</th><th>Başarılı</th><th>Başarısız</th><th>Anlamı</th></tr></thead><tbody><tr>
       <td><span class="dot bad-dot"></span>transfer success or expected conflict</td>
-      <td><strong>99.90%</strong></td>
-      <td>1016</td>
-      <td>1</td>
+      <td><strong>0.00%</strong></td>
+      <td>0</td>
+      <td>45743</td>
       <td>Tamamlanan transfer veya beklenen 409 conflict kabul edilir. Diğer status&#039;lar şüphelidir.</td>
     </tr>
 <tr>
-      <td><span class="dot bad-dot"></span>transfer did not fail with 500</td>
-      <td><strong>99.90%</strong></td>
-      <td>1016</td>
-      <td>1</td>
+      <td><span class="dot good"></span>transfer did not fail with 500</td>
+      <td><strong>100.00%</strong></td>
+      <td>45743</td>
+      <td>0</td>
       <td>API server hatası üretmemelidir.</td>
     </tr></tbody></table></div>
         </article>
@@ -366,7 +366,7 @@
   </article>
 <article class="counter-card">
     <div class="counter-name">status_201</div>
-    <div class="counter-value">104</div>
+    <div class="counter-value">0</div>
     <p>Başarılı transferler. Her biri tam 1 TRY taşımalıdır.</p>
   </article>
 <article class="counter-card">
@@ -376,17 +376,17 @@
   </article>
 <article class="counter-card">
     <div class="counter-name">status_409</div>
-    <div class="counter-value">912</div>
+    <div class="counter-value">0</div>
     <p>Hot-account yazımlarından beklenen optimistic concurrency conflict.</p>
   </article>
 <article class="counter-card">
     <div class="counter-name">status_500</div>
-    <div class="counter-value">1</div>
+    <div class="counter-value">0</div>
     <p>Server hatası. 0 olmalıdır.</p>
   </article>
 <article class="counter-card">
     <div class="counter-name">status_other</div>
-    <div class="counter-value">0</div>
+    <div class="counter-value">45743</div>
     <p>Takip edilmeyen status. 0 değilse incelenmeli.</p>
   </article></div>
       </section>
@@ -394,26 +394,26 @@
       <section class="two-col">
         <article class="panel">
           <h2>Metrik details</h2>
-          <div class="table-wrap"><table><thead><tr><th>Metrik</th><th>Değer</th><th>Açıklama</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>1017</strong></td><td>k6 tarafından gönderilen toplam HTTP isteği.</td></tr>
-<tr><td>http_req_failed</td><td><strong>89.77%</strong></td><td>k6 açısından 2xx/3xx dışı cevap oranı.</td></tr>
-<tr><td>http_req_duration avg</td><td><strong>216.22 ms</strong></td><td>Ortalama cevap süresi.</td></tr>
-<tr><td>http_req_duration med</td><td><strong>136.04 ms</strong></td><td>Ortanca cevap süresi.</td></tr>
-<tr><td>http_req_duration p90</td><td><strong>197.15 ms</strong></td><td>90. yüzdelik gecikme.</td></tr>
-<tr><td>http_req_duration p95</td><td><strong>209.45 ms</strong></td><td>95. yüzdelik gecikme.</td></tr>
-<tr><td>http_req_duration max</td><td><strong>7809.43 ms</strong></td><td>En yavaş istek.</td></tr>
-<tr><td>iterations</td><td><strong>1017</strong></td><td>Tamamlanan senaryo iterasyonu.</td></tr>
-<tr><td>[object Object]</td><td><strong>104</strong></td><td>Kabul edilen transferler. Bakiye değişimi bu sayıya eşit olmalı.</td></tr>
-<tr><td>[object Object]</td><td><strong>912</strong></td><td>Tek sender account kaynaklı optimistic concurrency conflict sayısı.</td></tr>
-<tr><td>[object Object]</td><td><strong>10.23%</strong></td><td>Kabul edilen transfer / toplam iterasyon.</td></tr>
-<tr><td>[object Object]</td><td><strong>89.68%</strong></td><td>409 conflict / toplam iterasyon.</td></tr></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Metrik</th><th>Değer</th><th>Açıklama</th></tr></thead><tbody><tr><td>http_reqs</td><td><strong>45743</strong></td><td>k6 tarafından gönderilen toplam HTTP isteği.</td></tr>
+<tr><td>http_req_failed</td><td><strong>100.00%</strong></td><td>k6 açısından 2xx/3xx dışı cevap oranı.</td></tr>
+<tr><td>http_req_duration avg</td><td><strong>4.23 ms</strong></td><td>Ortalama cevap süresi.</td></tr>
+<tr><td>http_req_duration med</td><td><strong>3.31 ms</strong></td><td>Ortanca cevap süresi.</td></tr>
+<tr><td>http_req_duration p90</td><td><strong>5.86 ms</strong></td><td>90. yüzdelik gecikme.</td></tr>
+<tr><td>http_req_duration p95</td><td><strong>8.27 ms</strong></td><td>95. yüzdelik gecikme.</td></tr>
+<tr><td>http_req_duration max</td><td><strong>108.48 ms</strong></td><td>En yavaş istek.</td></tr>
+<tr><td>iterations</td><td><strong>45743</strong></td><td>Tamamlanan senaryo iterasyonu.</td></tr>
+<tr><td>[object Object]</td><td><strong>0</strong></td><td>Kabul edilen transferler. Bakiye değişimi bu sayıya eşit olmalı.</td></tr>
+<tr><td>[object Object]</td><td><strong>0</strong></td><td>Tek sender account kaynaklı optimistic concurrency conflict sayısı.</td></tr>
+<tr><td>[object Object]</td><td><strong>0.00%</strong></td><td>Kabul edilen transfer / toplam iterasyon.</td></tr>
+<tr><td>[object Object]</td><td><strong>0.00%</strong></td><td>409 conflict / toplam iterasyon.</td></tr></tbody></table></div>
         </article>
         <article class="panel" id="tr-next">
           <h2>Yorum</h2>
-          <ul class="dense-list"><li>104 transfer kabul edildi. Sender bu kadar azalmalı, receiver bu kadar artmalı.</li>
-<li>912 istek 409 döndü. Bu genelde çakışma altında tutarlılık koruması çalıştı demektir.</li>
-<li>1 istek 500 döndü. Bu 0 kalmalıdır.</li></ul>
+          <ul class="dense-list"><li>0 transfer kabul edildi. Sender bu kadar azalmalı, receiver bu kadar artmalı.</li>
+<li>0 istek 409 döndü. Bu genelde çakışma altında tutarlılık koruması çalıştı demektir.</li>
+<li>0 istek 500 döndü. Bu 0 kalmalıdır.</li></ul>
           <h2>Sonraki aksiyon</h2>
-          <p>500 hatalarını k6 correlation id ile ApplicationLogs içinde incele.</p>
+          <p>Sonraki: daha az çakışmayla throughput ölçmek için multi-account load test oluştur.</p>
         </article>
       </section>
     </main>

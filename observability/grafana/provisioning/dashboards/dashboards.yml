@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: Money Transfer Observability
+    orgId: 1
+    folder: Money Transfer Service
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

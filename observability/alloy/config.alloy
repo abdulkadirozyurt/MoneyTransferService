@@ -1,0 +1,51 @@
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(money-transfer-alloy|money-transfer-loki|money-transfer-prometheus|money-transfer-tempo|money-transfer-grafana)"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "job"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/money-transfer-(.*)"
+    replacement   = "$1"
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/money-transfer-api"
+    replacement   = "money-transfer-api"
+    target_label  = "service_name"
+  }
+}
+
+loki.source.docker "docker_scrape" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.docker_logs.output
+  forward_to = [loki.write.loki_local.receiver]
+}
+
+loki.write "loki_local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

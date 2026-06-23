@@ -1,3 +1,4 @@
+USE MoneyTransferDb;
 SET NOCOUNT ON;
 
 DECLARE @Now datetimeoffset = SYSDATETIMEOFFSET();
