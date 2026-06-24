@@ -1,144 +1,38 @@
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
+using Scalar.AspNetCore;
 using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
 using MoneyTransferService.WebAPI.Endpoints;
-using MoneyTransferService.WebAPI.ExceptionHandling;
+using MoneyTransferService.WebAPI.Extensions;
 using MoneyTransferService.WebAPI.Middlewares;
-using MongoDB.Driver;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using Scalar.AspNetCore;
-using Serilog;
-using Serilog.Formatting.Compact;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using MoneyTransferService.WebAPI.ExceptionHandling;
+using MoneyTransferService.WebAPI.OpenApi;
 
 
-Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console(new CompactJsonFormatter())
-                .CreateBootstrapLogger();
+LoggerExtension.AddConsoleLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Host.UseSerilog((context, services, loggerConfiguration) =>
-    {
-        var mongoConnectionString = context.Configuration.GetConnectionString("MongoDb");
+    builder.ConfigureLogger();
+    builder.Services.AddOpenTelemetryServices(builder.Configuration, builder.Environment);
+    builder.Services.AddHealthChecksServices(builder.Configuration);
 
-        loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-            .Enrich.WithProperty("ApplicationName", "MoneyTransferService.WebAPI")
-            .WriteTo.Console(new CompactJsonFormatter());
-
-        if (!string.IsNullOrEmpty(mongoConnectionString))
-        {
-            loggerConfiguration.WriteTo.MongoDB(mongoConnectionString, collectionName: "ApplicationLogs");
-        }
-    });
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>().AddProblemDetails();
     builder.Services.RegisterDataAccessServices(builder.Configuration);
     builder.Services.RegisterBusinessServices(builder.Configuration);
-    builder.Services.AddOpenApi();
+    builder.Services.AddOpenApi(options =>
+        options.AddOperationTransformer(new CorrelationIdOperationTransformer()));
 
-    var openTelemetryConsoleExporterEnabled =
-        builder.Configuration.GetValue<bool>("OpenTelemetry:ConsoleExporterEnabled");
-
-    var openTelemetryOtlpExporterEnabled =
-        builder.Configuration.GetValue<bool>("OpenTelemetry:OtlpExporterEnabled");
-
-    var openTelemetryOtlpTraceEndpoint =
-        builder.Configuration.GetValue<string>("OpenTelemetry:OtlpTraceEndpoint") ?? "http://localhost:4317";
-
-    var openTelemetryOtlpMetricsEndpoint =
-        builder.Configuration.GetValue<string>("OpenTelemetry:OtlpMetricsEndpoint") ?? "http://localhost:9090/api/v1/otlp/v1/metrics";
-
-    builder.Services.AddOpenTelemetry()
-        .ConfigureResource(resource =>
-         {
-             resource.AddService(
-                 serviceName: builder.Environment.ApplicationName,
-                 serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
-                 serviceInstanceId: Environment.MachineName
-             );
-         })
-        .WithTracing(tracing =>
-        {
-            tracing
-            .AddAspNetCoreInstrumentation(options =>
-            {
-                options.RecordException = true;
-            })
-            .AddHttpClientInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation();
-
-            if (openTelemetryConsoleExporterEnabled)
-            {
-                tracing.AddConsoleExporter();
-            }
-
-            if (openTelemetryOtlpExporterEnabled)
-            {
-                tracing.AddOtlpExporter(options =>
-                {
-                    options.Endpoint = new Uri(openTelemetryOtlpTraceEndpoint);
-                });
-            }
-        })
-        .WithMetrics(metrics =>
-        {
-            metrics
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddRuntimeInstrumentation();
-
-            if (openTelemetryConsoleExporterEnabled)
-            {
-                metrics.AddConsoleExporter();
-            }
-
-            if (openTelemetryOtlpExporterEnabled)
-            {
-                metrics.AddOtlpExporter(options =>
-                {
-                    options.Endpoint = new Uri(openTelemetryOtlpMetricsEndpoint);
-                    options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                });
-            }
-        });
-
-    var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer");
-    var mongoConnectionString = builder.Configuration.GetConnectionString("MongoDb");
-
-    builder.Services.AddHealthChecks()
-            .AddSqlServer(
-                sqlConnectionString!,
-                name: "SqlServer",
-                timeout: TimeSpan.FromSeconds(3))
-            .AddMongoDb(
-                sp => new MongoClient(mongoConnectionString!),
-                name: "MongoDb",
-                timeout: TimeSpan.FromSeconds(3));
 
 
     var app = builder.Build();
 
     app.UseMiddleware<CorrelationIdMiddleware>();
-
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
-
-        options.EnrichDiagnosticContext = (diagnosticsContext, httpContext) =>
-        {
-            diagnosticsContext.Set("TraceId", httpContext.TraceIdentifier);
-            diagnosticsContext.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnosticsContext.Set("RequestScheme", httpContext.Request.Scheme);
-        };
-    });
-
+    app.UseConfiguredSerilogRequestLogging();
     app.UseExceptionHandler();
 
 
@@ -180,7 +74,4 @@ finally
     Log.CloseAndFlush();
 }
 
-
-
-
-
+public partial class Program;

@@ -3,18 +3,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: money-transfer-api
+    container_name: money-transfer-api    
     ports:
       - "${API_PORT:-8080}:8080"
     environment:
+      - DOTNET_GCHeapHardLimitPercentage=55
       - ConnectionStrings__SqlServer=${SQLSERVER_CONNECTION_STRING}
       - ConnectionStrings__MongoDb=${MONGODB_CONNECTION_STRING}
       - OpenTelemetry__OtlpExporterEnabled=true
-      - OpenTelemetry__OtlpTraceEndpoint=http://tempo:4317
-      - OpenTelemetry__OtlpMetricsEndpoint=http://prometheus:9090/api/v1/otlp/v1/metrics
+      - OpenTelemetry__TraceGrpcEndpoint=http://tempo:4317
+      - OpenTelemetry__MetricsHttpEndpoint=http://prometheus:9090/api/v1/otlp/v1/metrics
       - OTEL_SERVICE_NAME=money-transfer-api
-      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp/v1/metrics
-      - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -28,10 +27,10 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
-      interval: 15s
+      interval: 60s
       timeout: 5s
       retries: 3
-      start_period: 20s    
+      start_period: 20s
     networks:
       - money-transfer-network
 
@@ -52,13 +51,24 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:latest
     container_name: money-transfer-sqlserver
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 1G
+    #     reservations:
+    #       memory: 512M
+
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "${SQLSERVER_PASSWORD}"
     ports:
       - "${SQLSERVER_PORT:-1433}:1433"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -C -Q \"SELECT 1\" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -Q \"SELECT 1\""]
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$SA_PASSWORD" -C -Q "SELECT 1" || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$SA_PASSWORD" -Q "SELECT 1"',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -77,7 +87,11 @@ services:
     ports:
       - "${MONGODB_PORT:-27017}:27017"
     healthcheck:
-      test: ["CMD-SHELL", "mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --eval 'db.runCommand({ping:1})' --quiet"]
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --eval 'db.runCommand({ping:1})' --quiet",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -155,8 +169,10 @@ services:
     ports:
       - "3000:3000"
     environment:
+      GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_PLUGINS_PLUGIN_ADMIN_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     networks:
       - money-transfer-network

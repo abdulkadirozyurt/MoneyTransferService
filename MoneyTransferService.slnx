@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/MoneyTransferService.Business.Tests/MoneyTransferService.Business.Tests.csproj" />
+    <Project Path="test/MoneyTransferService.WebAPI.Tests/MoneyTransferService.WebAPI.Tests.csproj" />
   </Folder>
 </Solution>
