@@ -372,4 +372,9 @@ FodyWeavers.xsd
 Docs/
 .hermes/
 .claude/
-k6/
+
+# k6 generated reports stay local.
+k6/**/reports/
+k6/**/*-report.html
+k6/**/*-summary.json
+k6/**/*.summary.json

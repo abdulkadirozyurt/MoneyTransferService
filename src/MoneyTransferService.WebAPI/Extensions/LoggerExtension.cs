@@ -1,5 +1,5 @@
 using Serilog;
-using Serilog.Configuration;
+using Serilog.Formatting.Compact;
 
 namespace MoneyTransferService.WebAPI.Extensions;
 
@@ -8,7 +8,7 @@ public static class LoggerExtension
     public static void AddConsoleLogger()
     {
         Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
+            .WriteTo.Console(new RenderedCompactJsonFormatter())
             .CreateBootstrapLogger();
     }
 
@@ -21,7 +21,7 @@ public static class LoggerExtension
             .MinimumLevel.Information()
             .MinimumLevel.Override(nameof(Microsoft), Serilog.Events.LogEventLevel.Warning)
             .MinimumLevel.Override(nameof(Microsoft.EntityFrameworkCore), Serilog.Events.LogEventLevel.Warning)
-            .WriteTo.Console()
+            .WriteTo.Console(new RenderedCompactJsonFormatter())
             .Enrich.FromLogContext();
 
         if (!string.IsNullOrWhiteSpace(mongoConnectionString))

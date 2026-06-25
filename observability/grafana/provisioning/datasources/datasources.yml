@@ -31,6 +31,20 @@ datasources:
       httpMethod: GET
       serviceMap:
         datasourceUid: prometheus
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        tags:
+          - service.name
+        mappedTags:
+          - key: service.name
+            value: service_name
+        mapTagNamesEnabled: true
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: true
+        query: '{service_name="money-transfer-api"} | json | TraceId = "$${__trace.traceId}"'
 
   - name: Loki
     uid: loki
@@ -43,6 +57,6 @@ datasources:
       maxLines: 1000
       derivedFields:
         - datasourceUid: tempo
-          matcherRegex: '"@tr":"([^"]+)"'
+          matcherRegex: '"(?:@tr|TraceId)":"([^"]+)"'
           name: Trace
           url: '$${__value.raw}'

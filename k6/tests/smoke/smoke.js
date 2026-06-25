@@ -18,6 +18,7 @@ export const options = {
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 const REPORT_PATH = __ENV.REPORT_PATH || "smoke-report.html";
 const JSON_REPORT_PATH = deriveJsonReportPath(REPORT_PATH);
+const TEST_DOC = open("./README.md");
 
 export default function () {
   const response = http.get(`${BASE_URL}/health/ready`, { tags: healthTags });
@@ -45,6 +46,7 @@ export function handleSummary(data) {
         reportPath: REPORT_PATH,
         jsonReportPath: JSON_REPORT_PATH,
       }),
+      testDoc: TEST_DOC,
       verdict: (summary) => {
         const failedChecks = summary.metrics.checks?.values?.fails || 0;
         const failedRequests = summary.metrics.http_req_failed?.values?.fails || 0;

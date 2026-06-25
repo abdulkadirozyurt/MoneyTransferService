@@ -247,11 +247,11 @@ function buildExecutiveSummary(data, options, lang) {
 
   const text = {
     en: highFailButPass
-      ? `${totalReqs.toLocaleString()} requests. k6 HTTP fail rate: ${failPct} (expected — k6 counts 409 as failed). p95: ${p95} ms. Verdict: ${statusLabel}.`
-      : `${totalReqs.toLocaleString()} requests. HTTP fail rate: ${failPct}. p95: ${p95} ms. Verdict: ${statusLabel}.`,
+      ? `${totalReqs.toLocaleString()} requests. k6 HTTP fail rate: ${failPct} (check scenario rules; expected business responses may count as HTTP failed). p95: ${p95} ms. Verdict: ${statusLabel}.`
+      : `${totalReqs.toLocaleString()} requests. k6 HTTP fail rate: ${failPct}. p95: ${p95} ms. Verdict: ${statusLabel}.`,
     tr: highFailButPass
-      ? `${totalReqs.toLocaleString()} istek. k6 HTTP hata oranı: ${failPct} (beklenen — k6, 409'u failed sayar). p95: ${p95} ms. Karar: ${statusLabel}.`
-      : `${totalReqs.toLocaleString()} istek. HTTP hata oranı: ${failPct}. p95: ${p95} ms. Karar: ${statusLabel}.`,
+      ? `${totalReqs.toLocaleString()} istek. k6 HTTP hata oranı: ${failPct} (scenario kurallarını kontrol et; beklenen business cevapları HTTP failed sayılabilir). p95: ${p95} ms. Karar: ${statusLabel}.`
+      : `${totalReqs.toLocaleString()} istek. k6 HTTP hata oranı: ${failPct}. p95: ${p95} ms. Karar: ${statusLabel}.`,
   };
 
   return `<div class="exec-summary ${verdict.ok ? "pass" : "fail"}">
@@ -340,13 +340,31 @@ function metricCard(label, value, explanation, tone = "neutral") {
   </article>`;
 }
 
-function baseMetricCards(data, lang) {
+function httpFailRateExplanation(options, lang) {
+  const testType = (options.metadata?.testType || "").toLowerCase();
+  const text = {
+    en: {
+      smoke: "k6 marks non-success HTTP responses as failed. In smoke tests, any failed HTTP response is a real readiness problem.",
+      race: "k6 marks 4xx/5xx as failed unless expected statuses are configured. In race tests, 400/409 can be valid business outcomes.",
+      default: "k6 marks 4xx/5xx as failed unless expected statuses are configured. Compare this with scenario/business valid response rate.",
+    },
+    tr: {
+      smoke: "k6 başarılı olmayan HTTP cevaplarını failed sayar. Smoke testinde her failed HTTP cevabı gerçek readiness problemidir.",
+      race: "k6 expected status ayarlanmadıkça 4xx/5xx cevapları failed sayar. Race testlerinde 400/409 geçerli business sonucu olabilir.",
+      default: "k6 expected status ayarlanmadıkça 4xx/5xx cevapları failed sayar. Bunu scenario/business valid response rate ile birlikte oku.",
+    },
+  };
+
+  return text[lang]?.[testType] || text[lang]?.default || text.en.default;
+}
+
+function baseMetricCards(data, options, lang) {
   const text = {
     en: {
       req: "Total Requests",
       reqExp: "All HTTP requests sent during this run.",
-      fail: "HTTP Fail Rate",
-      failExp: "k6 marks 4xx/5xx as failed. Expected 409 conflicts may inflate this.",
+      fail: "k6 HTTP Fail Rate",
+      failExp: httpFailRateExplanation(options, "en"),
       p95: "p95 Latency",
       p95Exp: "95% of requests completed below this value.",
       avg: "Avg Latency",
@@ -359,8 +377,8 @@ function baseMetricCards(data, lang) {
     tr: {
       req: "Toplam İstek",
       reqExp: "Bu koşuda gönderilen tüm HTTP istekleri.",
-      fail: "HTTP Hata Oranı",
-      failExp: "k6 4xx/5xx cevapları failed sayar. Beklenen 409 conflict bu oranı yükseltebilir.",
+      fail: "k6 HTTP Hata Oranı",
+      failExp: httpFailRateExplanation(options, "tr"),
       p95: "p95 Gecikme",
       p95Exp: "İsteklerin %95'i bu sürenin altında tamamlandı.",
       avg: "Ort. Gecikme",
@@ -492,6 +510,16 @@ function buildProdGuardSection(options, lang) {
   </section>`;
 }
 
+function buildTestDocSection(options, lang) {
+  if (!options.testDoc) return "";
+
+  const title = lang === "tr" ? "Test Dokümantasyonu" : "Test Documentation";
+  return `<section class="panel test-doc-panel">
+    <h2>${title}</h2>
+    <pre>${escapeHtml(options.testDoc)}</pre>
+  </section>`;
+}
+
 function renderLanguage(data, options, lang) {
   const verdict = options.verdict(data);
   const title = localize(options.title, lang);
@@ -529,8 +557,10 @@ function renderLanguage(data, options, lang) {
 
       ${buildExecutiveSummary(data, options, lang)}
 
+      ${buildTestDocSection(options, lang)}
+
       <section class="metric-grid" aria-label="${tr("kpi", lang)}">
-        ${baseMetricCards(data, lang).join("\n")}
+        ${baseMetricCards(data, options, lang).join("\n")}
         ${extraRows.map((item) => metricCard(localize(item.label, lang), String(item.value), localize(item.explanation, lang))).join("\n")}
       </section>
 
@@ -730,6 +760,11 @@ export function generateHtmlReport(data, options) {
 
     /* Panels */
     .panel { padding: 24px; margin-bottom: 20px; }
+    .test-doc-panel pre {
+      white-space: pre-wrap; font: inherit; color: var(--text);
+      background: #f8fafc; border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px; line-height: 1.6;
+    }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 
     /* Counter Grid */

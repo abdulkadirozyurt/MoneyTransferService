@@ -41,6 +41,7 @@ const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 const REPORT_PATH = __ENV.REPORT_PATH || "transfer-load-report.html";
 const JSON_REPORT_PATH = deriveJsonReportPath(REPORT_PATH);
 const SCENARIO_NAME = "transfer-load";
+const TEST_DOC = open("./README.md");
 
 // Fixture-backed accounts (seeded by k6/setup/setup-scenario-data.sql).
 // Same hot sender/receiver pair as the original script to preserve contention intent.
@@ -73,7 +74,7 @@ export default function (data) {
   const response = http.post(
     `${BASE_URL}/api/transactions/transfer`,
     payload,
-    createTransferParams("k6-transfer")
+    createTransferParams("k6-transfer", {}, [200, 201, 409])
   );
 
   trackStatus(response, counters);
@@ -122,6 +123,7 @@ export function handleSummary(data) {
         reportPath: REPORT_PATH,
         jsonReportPath: JSON_REPORT_PATH,
       }),
+      testDoc: TEST_DOC,
       purpose: {
         en: "Sends concurrent transfers from one sender to one receiver. It intentionally creates contention to verify consistency, optimistic concurrency, server errors, and latency.",
         tr: "Tek gönderici hesaptan tek alıcı hesaba eş zamanlı transfer gönderir. Tutarlılık, optimistic concurrency, server hataları ve gecikmeyi ölçmek için kasıtlı çakışma üretir.",
@@ -175,7 +177,7 @@ export function handleSummary(data) {
         { en: "201 means money moved successfully once.", tr: "201 paranın bir kez başarıyla taşındığı anlamına gelir." },
         { en: "409 means expected optimistic concurrency conflict on the hot sender account.", tr: "409 hot sender account üzerinde beklenen optimistic concurrency conflict anlamına gelir." },
         { en: "500 is a real server failure and must stay at 0.", tr: "500 gerçek server hatasıdır ve 0 kalmalıdır." },
-        { en: "http_req_failed can be high because k6 treats 409 as failed HTTP, even if business behavior is correct.", tr: "k6 409'u HTTP failed saydığı için http_req_failed yüksek olabilir; bu business davranışı doğru olsa bile olur." },
+        { en: "409 is configured as an expected HTTP status in this test, so http_req_failed should stay aligned with real unexpected responses.", tr: "Bu testte 409 expected HTTP status olarak ayarlandı; bu yüzden http_req_failed gerçek beklenmeyen cevaplarla uyumlu kalmalı." },
         { en: "p95 below 500ms is the current latency target.", tr: "p95 değerinin 500ms altında kalması mevcut gecikme hedefidir." },
       ],
       checkExplanations: {
