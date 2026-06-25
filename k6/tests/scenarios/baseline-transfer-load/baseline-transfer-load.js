@@ -38,7 +38,7 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
-const REPORT_PATH = __ENV.REPORT_PATH || "baseline-transfer-load-report.html";
+const REPORT_PATH = __ENV.REPORT_PATH || "reports/baseline-transfer-load-report.html";
 const JSON_REPORT_PATH = deriveJsonReportPath(REPORT_PATH);
 const SCENARIO_NAME = "baseline-transfer-load";
 const TEST_DOC = open("./README.md");

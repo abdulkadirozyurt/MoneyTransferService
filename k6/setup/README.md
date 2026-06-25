@@ -24,6 +24,7 @@ Scenario data:
 |---|---|
 | `overdraft-race` | 1 sender account with `100.00 TRY`, 20 receiver accounts with `0.00 TRY` |
 | `hotspot-load` | 1 hot receiver account with `0.00 TRY`, 50 sender accounts with `100000.00 TRY` |
+| `baseline-transfer-load` | 1 sender account with `1000000.00 TRY`, 1 receiver account with `0.00 TRY` |
 | `spike-traffic` | 100 sender accounts with `1000000.00 TRY`, 100 receiver accounts with `0.00 TRY` |
 
 In short: this SQL file resets known customers and accounts so race/load/spike tests can run repeatedly against predictable data.

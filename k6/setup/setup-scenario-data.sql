@@ -113,6 +113,41 @@ BEGIN
     SET @i += 1;
 END;
 
+-- Scenario 3: baseline-transfer-load. One sender, one receiver.
+INSERT INTO @Fixtures
+VALUES
+(
+    'baseline-transfer-load',
+    'sender',
+    1,
+    CONVERT(uniqueidentifier, '33333333-3333-7333-8333-333333333330'),
+    CONVERT(uniqueidentifier, '33333333-3333-7333-8333-333333333333'),
+    'TRK6BL00000000000000000001',
+    'k6-baseline-sender-1@example.com',
+    '+905930000001',
+    'K6Baseline',
+    'Sender1',
+    '40000000001',
+    1000000.00
+);
+
+INSERT INTO @Fixtures
+VALUES
+(
+    'baseline-transfer-load',
+    'receiver',
+    2,
+    CONVERT(uniqueidentifier, '44444444-4444-7444-8444-444444444440'),
+    CONVERT(uniqueidentifier, '44444444-4444-7444-8444-444444444444'),
+    'TRK6BL00000000000000000002',
+    'k6-baseline-receiver-2@example.com',
+    '+905930000002',
+    'K6Baseline',
+    'Receiver2',
+    '40000000002',
+    0.00
+);
+
 -- Scenario 5: spike-traffic. One hundred funded senders, one hundred receivers.
 SET @i = 1;
 WHILE @i <= 100
