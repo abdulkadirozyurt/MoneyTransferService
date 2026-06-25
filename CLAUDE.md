@@ -13,42 +13,59 @@ Do not let it become graveyard.
 - Build only at meaningful checkpoints. Avoid continuous builds.
 - Understand the problem first. If it is complex, create a plan before execution.
 - Always decompose work into independent, testable units.
+- Default mode: subagent first, main agent verifies.
+
+## Subagent-first Execution Rule
+
+- For every non-trivial task, spawn at least one subagent before making changes.
+- The main agent should not directly execute implementation work unless the task is truly trivial.
+- The main agent is responsible for:
+  - understanding the request,
+  - identifying constraints and hidden dependencies,
+  - defining expected outcome,
+  - decomposing work into independent, testable units,
+  - delegating work to subagent(s),
+  - reviewing subagent output,
+  - integrating accepted changes,
+  - verifying final state.
+
+- A task is trivial only when it is a single deterministic change with no meaningful design, dependency, or validation risk.
+  Examples:
+  - fix a typo,
+  - add or adjust a short comment,
+  - answer a simple read-only question,
+  - run one obvious command requested by the user.
+
+- Never accept subagent output blindly. Always verify it against the original request and project rules.
+- After each subagent completes:
+  - validate output against expected behavior,
+  - if invalid, re-decompose or re-run with corrected scope.
 
 ## Task Decomposition
 
 - Every task must be split into independent components when possible.
 - If dependencies exist, construct a dependency graph before execution and respect it.
-- Parallel execution is allowed only when tasks are truly independent (no shared state, no shared schema, no file coupling).
+- Shared state, shared schema, shared files, generated artifacts, or ordering-sensitive logic require sequential delegation.
 
-### Parallel Task Rule
+### Parallel Subagent Rule
 
-- If there are 2 or more independent tasks, spawn separate Tasks for each.
-- Do NOT blindly parallelize based on count alone (e.g. “edit 3 files” is not automatically 3 tasks).
-- Parallelization is only valid if tasks do not require coordination or sequential validation.
-
-## Execution Model
-
-- The main agent does not execute subtasks directly.
-- The main agent is responsible for:
-  - Planning
-  - Task decomposition
-  - Task delegation
-  - Result validation and integration
-
-- After each Task completes:
-  - Validate output against expected behavior
-  - If invalid, re-decompose or re-run the Task with corrected scope
+- Parallel subagents are allowed only for truly independent work.
+- Do not parallelize only because there are multiple files or multiple edits.
+- Parallel work must not share mutable files, database schema, generated artifacts, or ordering-sensitive logic.
+- Shared state or shared files require sequential delegation and validation after each result.
 
 ## Workflow
 
-1. Understand the requirement
-2. Identify constraints and hidden dependencies
-3. Decompose into tasks
-4. Decide execution strategy (sequential vs parallel)
-5. Spawn Tasks
-6. Validate outputs
-7. Integrate results
-8. Proceed to next milestone
+1. Understand the requirement.
+2. Identify constraints and hidden dependencies.
+3. Decide if the task is trivial.
+4. If trivial, execute directly.
+5. If non-trivial, decompose and spawn at least one subagent.
+6. Decide sequential vs parallel delegation.
+7. Validate subagent output.
+8. Integrate accepted changes.
+9. Verify final state.
+10. Report outcome and next recommended task.
 
 ## Model Routing
 
@@ -464,7 +481,7 @@ k6/lib/html-report.js
 k6/lib/seed-helper.js
 k6/setup/setup-scenario-data.sql
 k6/tests/smoke/smoke.js
-k6/tests/transfer-load/transfer-load.js
+k6/tests/scenarios/baseline-transfer-load/baseline-transfer-load.js
 k6/tests/scenarios/hotspot-load/hotspot-load.js
 k6/tests/scenarios/overdraft-race/overdraft-race.js
 k6/tests/scenarios/spike-traffic/spike-traffic.js
@@ -473,7 +490,7 @@ k6/tests/scenarios/spike-traffic/spike-traffic.js
 Scenario intent:
 
 - `smoke` = basic API/health confidence.
-- `transfer-load` = baseline transfer throughput.
+- `baseline-transfer-load` = baseline transfer throughput.
 - `hotspot-load` = contention on popular accounts.
 - `overdraft-race` = concurrency/race check around insufficient funds.
 - `spike-traffic` = sudden traffic burst behavior.

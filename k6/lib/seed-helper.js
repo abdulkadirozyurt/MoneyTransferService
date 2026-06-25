@@ -1,3 +1,21 @@
+/**
+ * Shared helper functions for k6 test scenarios.
+ *
+ * This file exists so each scenario does not repeat the same setup and request code.
+ * It provides reusable helpers for:
+ *
+ * - building JSON request params with the right Content-Type header,
+ * - tagging transfer and health requests so reports can group them by endpoint,
+ * - creating traceable X-Correlation-Id values for every request,
+ * - verifying seeded account data before a scenario starts,
+ * - counting HTTP response statuses like 200, 201, 400, 409, 500, and other,
+ * - deriving JSON summary report paths from HTML report paths,
+ * - building common report metadata for the custom HTML report,
+ * - preventing load/race/spike tests from accidentally running against production.
+ *
+ * In short: scenario files describe the test behavior; this file handles the common
+ * plumbing around setup, tagging, correlation, counters, reporting, and safety.
+ */
 import http from "k6/http";
 import exec from "k6/execution";
 
@@ -111,8 +129,8 @@ export function createTransferParams(prefix, extraTags = {}, expectedStatuses = 
 
 /**
  * Derive a JSON summary path from an HTML report path.
- *   "reports/transfer-load.html" -> "reports/transfer-load.summary.json"
- *   "transfer-load"              -> "transfer-load.summary.json"
+ *   "reports/baseline-transfer-load.html" -> "reports/baseline-transfer-load.summary.json"
+ *   "baseline-transfer-load"              -> "baseline-transfer-load.summary.json"
  * Always returns a string ending in ".summary.json".
  */
 export function deriveJsonReportPath(reportPath) {
