@@ -18,10 +18,83 @@ public class TransactionService(
     ITransferBusinessRules transferBusinessRules,
     ITransactionAuditRepository auditRepository) : ITransactionService
 {
+    private const int MaxConcurrencyRetryAttempts = 3;
+
     public async Task<Transaction> TransferAsync(TransferCommand request, CancellationToken cancellationToken = default)
     {
         await ValidateRequestAsync(request, cancellationToken);
 
+        for (int attempt = 1; attempt <= MaxConcurrencyRetryAttempts; attempt++)
+        {
+            try
+            {
+                return await ExecuteTransferAttemptAsync(request, cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MaxConcurrencyRetryAttempts)
+            {
+                continue; // Retry the operation
+            }
+            catch (DbUpdateConcurrencyException exception)
+            {
+                var failedTransfer = CreateFailedTransfer(request, "Optimistic concurrency version conflict during transfer.");
+
+                await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
+
+                throw new ConcurrencyException(failedTransfer.FailureReason!, exception);
+            }
+            catch (DbUpdateException exception) // Another request may have committed the same idempotency key first.
+            {
+                var existingTransfer = await GetExistingTransferAsync(
+                 request,
+                 transactionRepository,
+                 cancellationToken);
+
+                if (existingTransfer != null)
+                {
+                    return existingTransfer;
+                }
+
+                var failedTransfer = CreateFailedTransfer(
+                    request,
+                    "Transfer could not be completed.");
+
+                await auditRepository.LogTransferAsync(
+                    failedTransfer,
+                    AuditEventType.FAILED,
+                    failedTransfer.FailureReason);
+
+                throw new TransferPersistenceException(failedTransfer.FailureReason!, exception);
+            }
+        }
+
+        throw new InvalidOperationException("Max concurrency retry attempts exceeded.");
+    }
+
+    public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await transactionRepository.GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        var transactions = await transactionRepository.GetAllAsync(cancellationToken);
+        return transactions.OrderByDescending(transaction => transaction.CreatedAt);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private async Task<Transaction> ExecuteTransferAttemptAsync(TransferCommand request, CancellationToken cancellationToken)
+    {
         await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         try
@@ -45,7 +118,7 @@ public class TransactionService(
 
             await CompleteTransferAsync(transfer, transactionRepository, cancellationToken);
 
-            await SaveTransferAsync(request, transferAccounts, transfer, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
 
             await unitOfWork.CommitTransactionAsync(cancellationToken);
 
@@ -58,62 +131,13 @@ public class TransactionService(
             await unitOfWork.RollbackTransactionAsync(cancellationToken);
             throw;
         }
-
-
-
-
     }
 
-    public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return await transactionRepository.GetByIdAsync(id, cancellationToken);
-    }
-
-    public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(CancellationToken cancellationToken = default)
-    {
-        var transactions = await transactionRepository.GetAllAsync(cancellationToken);
-        return transactions.OrderByDescending(transaction => transaction.CreatedAt);
-    }
-
-    private async Task SaveTransferAsync(
-        TransferCommand request,
-        TransferAccounts transferAccounts,
-        Transaction transfer,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            var failedTransfer = CreateFailedTransfer(
-                request,
-                "Optimistic concurrency version conflict during save.",
-                transferAccounts.SenderAccount,
-                transferAccounts.ReceiverAccount,
-                transfer.Id);
-            await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
-            throw new ConcurrencyException(failedTransfer.FailureReason!, ex);
-        }
-        catch (DbUpdateException ex)
-        {
-            var failedTransfer = CreateFailedTransfer(
-                request,
-                "Transfer could not be completed.",
-                transferAccounts.SenderAccount,
-                transferAccounts.ReceiverAccount,
-                transfer.Id);
-            await auditRepository.LogTransferAsync(failedTransfer, AuditEventType.FAILED, failedTransfer.FailureReason);
-            throw new TransferPersistenceException(failedTransfer.FailureReason!, ex);
-        }
-    }
-
-    private static async Task CompleteTransferAsync(Transaction transfer, IRepository<Transaction> transcationRepository, CancellationToken cancellationToken)
+    private static async Task CompleteTransferAsync(Transaction transfer, IRepository<Transaction> transactionRepository, CancellationToken cancellationToken)
     {
         transfer.Status = TransferStatus.COMPLETED;
         transfer.CompletedAt = DateTimeOffset.UtcNow;
-        await transcationRepository.AddAsync(transfer, cancellationToken);
+        await transactionRepository.AddAsync(transfer, cancellationToken);
     }
 
     private async Task EnsureTransferCanBeCompletedAsync(TransferCommand request, TransferAccounts transferAccounts)
@@ -143,8 +167,6 @@ public class TransactionService(
             throw;
         }
     }
-
-    private sealed record TransferAccounts(Account SenderAccount, Account ReceiverAccount);
 
     private async Task<TransferAccounts> GetTransferAccountsAsync(IRepository<Account> accountRepository, TransferCommand request, CancellationToken cancellationToken)
     {
@@ -232,6 +254,11 @@ public class TransactionService(
 
         return transfer;
     }
+
+
+
+    private sealed record TransferAccounts(Account SenderAccount, Account ReceiverAccount);
+
 }
 
 

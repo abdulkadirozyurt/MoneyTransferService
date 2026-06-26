@@ -4,6 +4,7 @@ using Moq;
 using MoneyTransferService.Business.Concrete;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.DataAccess.Abstract;
+using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.Business.Tests.Concrete;
@@ -11,20 +12,17 @@ namespace MoneyTransferService.Business.Tests.Concrete;
 public class CustomerServiceTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<IRepository<IndividualCustomer>> _individualCustomerRepositoryMock;
-    private readonly Mock<IRepository<CorporateCustomer>> _corporateCustomerRepositoryMock;
+    private readonly Mock<IIndividualCustomerRepository> _individualCustomerRepositoryMock;
+    private readonly Mock<ICorporateCustomerRepository> _corporateCustomerRepositoryMock;
     private readonly CustomerService _customerService;
 
     public CustomerServiceTests()
     {
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _individualCustomerRepositoryMock = new Mock<IRepository<IndividualCustomer>>();
-        _corporateCustomerRepositoryMock = new Mock<IRepository<CorporateCustomer>>();
+        _individualCustomerRepositoryMock = new Mock<IIndividualCustomerRepository>();
+        _corporateCustomerRepositoryMock = new Mock<ICorporateCustomerRepository>();
 
-        _unitOfWorkMock.Setup(u => u.GetRepository<IndividualCustomer>()).Returns(_individualCustomerRepositoryMock.Object);
-        _unitOfWorkMock.Setup(u => u.GetRepository<CorporateCustomer>()).Returns(_corporateCustomerRepositoryMock.Object);
-
-        _customerService = new CustomerService(_unitOfWorkMock.Object);
+        _customerService = new CustomerService(_unitOfWorkMock.Object, _individualCustomerRepositoryMock.Object, _corporateCustomerRepositoryMock.Object);
     }
 
     [Fact]

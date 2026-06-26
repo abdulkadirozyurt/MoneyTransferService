@@ -8,8 +8,10 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.BusinessRules;
 using MoneyTransferService.Business.Concrete;
 using MoneyTransferService.Business.Exceptions;
+using MoneyTransferService.Business.Requests;
 using MoneyTransferService.Business.Validators;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Core.DataAccess.Abstract;
@@ -22,23 +24,22 @@ namespace MoneyTransferService.Business.Tests.Concrete;
 public class TransferServiceTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<IRepository<Account>> _accountRepositoryMock;
-    private readonly Mock<IRepository<Transaction>> _transferRepositoryMock;
+    private readonly Mock<IAccountRepository> _accountRepositoryMock;
+    private readonly Mock<ITransactionRepository> _transferRepositoryMock;
     private readonly Mock<ITransactionAuditRepository> _auditRepositoryMock;
     private readonly TransactionService _transferService;
 
     public TransferServiceTests()
     {
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _accountRepositoryMock = new Mock<IRepository<Account>>();
-        _transferRepositoryMock = new Mock<IRepository<Transaction>>();
+        _accountRepositoryMock = new Mock<IAccountRepository>();
+        _transferRepositoryMock = new Mock<ITransactionRepository>();
         _auditRepositoryMock = new Mock<ITransactionAuditRepository>();
-
-        _unitOfWorkMock.Setup(u => u.GetRepository<Account>()).Returns(_accountRepositoryMock.Object);
-        _unitOfWorkMock.Setup(u => u.GetRepository<Transaction>()).Returns(_transferRepositoryMock.Object);
 
         _transferService = new TransactionService(
             _unitOfWorkMock.Object,
+            _transferRepositoryMock.Object,
+            _accountRepositoryMock.Object,
             new TransferCommandValidator(),
             new TransferBusinessRules(),
             _auditRepositoryMock.Object);
@@ -57,11 +58,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -82,11 +84,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            accountId,
-            accountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                accountId,
+                accountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -114,16 +117,17 @@ public class TransferServiceTests
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction> { existingTransfer });
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingTransfer);
 
         // Act
         var result = await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         result.Should().BeEquivalentTo(existingTransfer);
@@ -158,11 +162,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotFoundException>();
@@ -201,11 +206,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotFoundException>();
@@ -255,11 +261,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotActiveException>();
@@ -307,11 +314,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<CurrencyMismatchException>();
@@ -359,11 +367,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<InsufficientFundsException>();
@@ -424,12 +433,13 @@ public class TransferServiceTests
 
         // Act
         var result = await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey,
-            description);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey,
+                description));
 
         // Assert
         senderAccount.Balance.Should().Be(900m);
@@ -500,11 +510,12 @@ public class TransferServiceTests
 
         // Act
         Func<Task> act = async () => await _transferService.TransferAsync(
-            senderAccountId,
-            receiverAccountId,
-            amount,
-            currencyCode,
-            idempotencyKey);
+            new TransferCommand(
+                senderAccountId,
+                receiverAccountId,
+                amount,
+                currencyCode,
+                idempotencyKey));
 
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();
