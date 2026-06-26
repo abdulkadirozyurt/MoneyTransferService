@@ -2,6 +2,7 @@ using Serilog;
 using Scalar.AspNetCore;
 using MoneyTransferService.Business;
 using MoneyTransferService.DataAccess;
+using MoneyTransferService.WebAPI.Constants;
 using MoneyTransferService.WebAPI.Endpoints;
 using MoneyTransferService.WebAPI.Extensions;
 using MoneyTransferService.WebAPI.Middlewares;
@@ -27,13 +28,14 @@ try
     builder.Services.AddOpenApi(options =>
         options.AddOperationTransformer(new CorrelationIdOperationTransformer()));
 
-
+    builder.Services.AddRateLimitingConfiguration();
 
     var app = builder.Build();
 
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseConfiguredSerilogRequestLogging();
     app.UseExceptionHandler();
+    app.UseRateLimiter();
 
 
     // if (app.Environment.IsDevelopment())
@@ -56,7 +58,8 @@ try
 
     app.UseHttpsRedirection();
 
-    var api = app.MapGroup("/api");
+    var api = app.MapGroup("/api")
+        .RequireRateLimiting(RateLimitingPolicies.API);
 
     api.MapAccountEndpoints();
     api.MapCustomerEndpoints();
