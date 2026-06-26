@@ -6,7 +6,7 @@ using MoneyTransferService.Entities.Concrete;
 
 namespace MoneyTransferService.DataAccess.Context;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options), IUnitOfWork
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

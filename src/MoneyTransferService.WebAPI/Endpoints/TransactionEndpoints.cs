@@ -32,6 +32,7 @@ public static class TransactionEndpoints
 
         var transaction = await transactionService.TransferAsync(command, cancellationToken);
 
+        // wrong status code for idempotent requests, should be 200 OK if the transaction already exists !!!!!!!!!!!!!!!!!
         return Results.Created($"/api/transactions/{transaction.Id}", TransactionResponse.FromTransaction(transaction));
     }
 

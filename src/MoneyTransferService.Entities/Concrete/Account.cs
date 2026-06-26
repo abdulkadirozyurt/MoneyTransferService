@@ -38,7 +38,7 @@ public sealed class Account : Entity
         Balance -= amount;
     }
 
-    public void Credit(decimal amount)
+    public void Deposit(decimal amount)
     {
         if (amount <= 0)
         {

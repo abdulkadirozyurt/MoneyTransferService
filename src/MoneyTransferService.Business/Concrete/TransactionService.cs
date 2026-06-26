@@ -22,29 +22,46 @@ public class TransactionService(
     {
         await ValidateRequestAsync(request, cancellationToken);
 
-        Transaction? existingTransfer = await GetExistingTransferAsync(request, transactionRepository, cancellationToken);
-        if (existingTransfer != null)
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+
+        try
         {
-            return existingTransfer;
+            Transaction? existingTransfer = await GetExistingTransferAsync(request, transactionRepository, cancellationToken);
+            if (existingTransfer != null)
+            {
+                await unitOfWork.RollbackTransactionAsync(cancellationToken);
+                return existingTransfer;
+            }
+
+            var transferAccounts = await GetTransferAccountsAsync(accountRepository, request, cancellationToken);
+
+            await EnsureTransferCanBeCompletedAsync(request, transferAccounts);
+
+            var transfer = CreatePendingTransfer(request, transferAccounts);
+
+            await auditRepository.LogTransferAsync(transfer, AuditEventType.INITIATED);
+
+            ApplyTransferBalanceChanges(request, transferAccounts, accountRepository);
+
+            await CompleteTransferAsync(transfer, transactionRepository, cancellationToken);
+
+            await SaveTransferAsync(request, transferAccounts, transfer, cancellationToken);
+
+            await unitOfWork.CommitTransactionAsync(cancellationToken);
+
+            await auditRepository.LogTransferAsync(transfer, AuditEventType.COMPLETED);
+
+            return transfer;
+        }
+        catch
+        {
+            await unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
         }
 
-        var transferAccounts = await GetTransferAccountsAsync(accountRepository, request, cancellationToken);
 
-        await EnsureTransferCanBeCompletedAsync(request, transferAccounts);
 
-        var transfer = CreatePendingTransfer(request, transferAccounts);
 
-        await auditRepository.LogTransferAsync(transfer, AuditEventType.INITIATED);
-
-        ApplyTransferBalanceChanges(request, transferAccounts, accountRepository);
-
-        await CompleteTransferAsync(transfer, transactionRepository, cancellationToken);
-
-        await SaveTransferAsync(request, transferAccounts, transfer, cancellationToken);
-
-        await auditRepository.LogTransferAsync(transfer, AuditEventType.COMPLETED);
-
-        return transfer;
     }
 
     public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -144,10 +161,10 @@ public class TransactionService(
         return new TransferAccounts(senderAccount, receiverAccount);
     }
 
+    // Idempotency check: If a transfer with the same IdempotencyKey already exists, return it instead of creating a new one.
     private static async Task<Transaction?> GetExistingTransferAsync(TransferCommand request, IRepository<Transaction> transferRepository, CancellationToken cancellationToken)
     {
-        var existingTransfers = await transferRepository.GetAllAsync(cancellationToken);
-        return existingTransfers.FirstOrDefault(t => t.IdempotencyKey == request.IdempotencyKey);
+        return await transferRepository.GetAsync(t => t.IdempotencyKey == request.IdempotencyKey, cancellationToken);
     }
 
     private async Task ValidateRequestAsync(TransferCommand request, CancellationToken cancellationToken)
@@ -162,7 +179,7 @@ public class TransactionService(
     private static void ApplyTransferBalanceChanges(TransferCommand request, TransferAccounts transferAccounts, IRepository<Account> accountRepository)
     {
         transferAccounts.SenderAccount.Debit(request.Amount);
-        transferAccounts.ReceiverAccount.Credit(request.Amount);
+        transferAccounts.ReceiverAccount.Deposit(request.Amount);
 
         accountRepository.Update(transferAccounts.SenderAccount);
         accountRepository.Update(transferAccounts.ReceiverAccount);

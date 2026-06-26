@@ -68,7 +68,7 @@ public class AccountEntityTests
         };
 
         // Act
-        account.Credit(300m);
+        account.Deposit(300m);
 
         // Assert
         account.Balance.Should().Be(1300m);
@@ -81,8 +81,8 @@ public class AccountEntityTests
         var account = new Account { Balance = 1000m };
 
         // Act
-        Action actZero = () => account.Credit(0m);
-        Action actNeg = () => account.Credit(-50m);
+        Action actZero = () => account.Deposit(0m);
+        Action actNeg = () => account.Deposit(-50m);
 
         // Assert
         actZero.Should().Throw<ArgumentException>();

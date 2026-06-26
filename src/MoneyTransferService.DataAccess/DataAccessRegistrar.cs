@@ -22,7 +22,7 @@ public static class DataAccessRegistrar
             options.UseSqlServer(configuration.GetConnectionString("SqlServer"));
         });
 
-        services.AddScoped<IUnitOfWork>(service => service.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         var connectionString = configuration.GetConnectionString("MongoDb");
         if (string.IsNullOrEmpty(connectionString))
