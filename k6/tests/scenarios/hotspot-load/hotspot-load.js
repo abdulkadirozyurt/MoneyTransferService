@@ -76,7 +76,7 @@ export default function (data) {
   const payload = JSON.stringify({
     senderAccountId: sender.id,
     receiverAccountId: data.receiverAccountId,
-    amount: 1010,
+    amount: 3000,
     currencyCode: CURRENCY_CODE,
     description: "Hotspot load scenario transfer",
     idempotencyKey: crypto.randomUUID(),

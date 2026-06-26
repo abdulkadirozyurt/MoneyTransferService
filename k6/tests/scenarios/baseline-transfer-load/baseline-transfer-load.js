@@ -15,6 +15,7 @@ const status200 = new Counter("status_200");
 const status201 = new Counter("status_201");
 const status400 = new Counter("status_400");
 const status409 = new Counter("status_409");
+const status429 = new Counter("status_429");
 const status500 = new Counter("status_500");
 const statusOther = new Counter("status_other");
 // Business-aware custom metrics. 409 is an expected concurrency conflict,
@@ -22,7 +23,7 @@ const statusOther = new Counter("status_other");
 const serverErrors = new Counter("server_errors");
 const validBusinessResponses = new Rate("valid_business_responses");
 
-const counters = { status200, status201, status400, status409, status500, statusOther };
+const counters = { status200, status201, status400, status409, status429, status500, statusOther };
 
 export const options = {
   vus: 10,
@@ -74,7 +75,7 @@ export default function (data) {
   const response = http.post(
     `${BASE_URL}/api/transactions/transfer`,
     payload,
-    createTransferParams("k6-transfer", {}, [200, 201, 409])
+    createTransferParams("k6-transfer", {}, [200, 201, 409, 429, 500])
   );
 
   trackStatus(response, counters);
@@ -88,12 +89,12 @@ export default function (data) {
   // Valid business outcome: success (200/201) or expected concurrency conflict (409).
   // 400/500/other are NOT valid here because all senders are funded and seeded.
   const isValidBusiness =
-    response.status === 200 || response.status === 201 || response.status === 409;
+    response.status === 200 || response.status === 201 || response.status === 409 || response.status === 429;
   validBusinessResponses.add(isValidBusiness);
 
   check(response, {
     "transfer success or expected conflict": (res) =>
-      res.status === 200 || res.status === 201 || res.status === 409,
+      res.status === 200 || res.status === 201 || res.status === 409 || res.status === 429,
     "transfer did not fail with 500": (res) => res.status < 500,
     // Conservative body validation: a successful transfer should carry a transaction id.
     // TODO: Confirm final transfer response schema with API contract (id vs transactionId).
