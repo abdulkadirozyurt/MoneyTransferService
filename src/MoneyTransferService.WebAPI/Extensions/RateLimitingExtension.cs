@@ -15,7 +15,9 @@ public static class RateLimitingExtension
             // Applies one shared rate limit to all /api endpoints.
             options.AddPolicy(RateLimitingPolicies.API, _ =>
                 RateLimitPartition.GetSlidingWindowLimiter(RateLimitingPolicies.API, _ => new SlidingWindowRateLimiterOptions
-                {
+                {                   // !!!!!!!!!!!!!
+
+                
                     // Allows 1000 requests per minute, evaluated with 10-second sliding segments.
                     PermitLimit = 1000,
                     Window = TimeSpan.FromMinutes(1),

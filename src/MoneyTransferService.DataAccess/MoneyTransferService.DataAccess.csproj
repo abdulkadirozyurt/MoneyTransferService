@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
     <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
     <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="3.0.0" />
+    <PackageReference Include="Z.EntityFramework.Plus.EFCore" Version="10.105.6" />
   </ItemGroup>
 
   <ItemGroup>
