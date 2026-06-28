@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
-using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Abstract.Infrastructure;
 using MoneyTransferService.Business.Options;
 
-namespace MoneyTransferService.Business.Concrete;
+namespace MoneyTransferService.Business.Concrete.Infrastructure;
 
 /// <summary>
 /// Generates valid Turkish IBAN values using configurable bank code settings.

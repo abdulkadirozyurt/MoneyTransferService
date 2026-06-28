@@ -1,4 +1,4 @@
-namespace MoneyTransferService.Business.Abstract;
+namespace MoneyTransferService.Business.Abstract.Infrastructure;
 
 /// <summary>
 /// Generates valid IBAN values for newly created accounts.

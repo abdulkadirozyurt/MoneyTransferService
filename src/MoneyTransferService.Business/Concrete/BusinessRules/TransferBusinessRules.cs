@@ -1,9 +1,9 @@
-using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Abstract.BusinessRules;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Entities.Concrete;
 
-namespace MoneyTransferService.Business.BusinessRules;
+namespace MoneyTransferService.Business.Concrete.BusinessRules;
 
 public sealed class TransferBusinessRules : ITransferBusinessRules
 {

@@ -10,13 +10,28 @@ public sealed record CreateTransferRequest(
     string IdempotencyKey,
     string? Description = null);
 
+public sealed record CreateDepositRequest(
+    string AccountIban,
+    decimal Amount,
+    string CurrencyCode,
+    string IdempotencyKey,
+    string? Description = null);
+
+public sealed record CreateWithdrawRequest(
+    string AccountIban,
+    decimal Amount,
+    string CurrencyCode,
+    string IdempotencyKey,
+    string? Description = null);
+
 public sealed record TransactionResponse(
     Guid Id,
-    string SenderIban,
-    string ReceiverIban,
+    string? SenderIban,
+    string? ReceiverIban,
     decimal Amount,
     string CurrencyCode,
     string Status,
+    string TransactionType,
     string IdempotencyKey,
     string? Description,
     string? FailureReason,
@@ -32,6 +47,7 @@ public sealed record TransactionResponse(
             transaction.Amount,
             transaction.CurrencyCode,
             transaction.Status,
+            transaction.TransactionType,
             transaction.IdempotencyKey,
             transaction.Description,
             transaction.FailureReason,

@@ -2,8 +2,12 @@ using FluentAssertions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using MoneyTransferService.Business.BusinessRules;
+using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Concrete.BusinessRules;
 using MoneyTransferService.Business.Concrete;
+using MoneyTransferService.Business.Concrete.Handlers;
+using MoneyTransferService.Business.Concrete.Infrastructure;
+using MoneyTransferService.Business.Models;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Business.Requests;
 using MoneyTransferService.Business.Validators;
@@ -20,7 +24,10 @@ public class TransferServiceTests
     private readonly Mock<IAccountRepository> _accountRepositoryMock;
     private readonly Mock<ITransactionRepository> _transferRepositoryMock;
     private readonly Mock<ITransactionAuditRepository> _auditRepositoryMock;
-    private readonly TransactionService _transferService;
+    private readonly TransferHandler _transferHandler;
+
+    private const string SenderIban = "TR000000000000000000000001";
+    private const string ReceiverIban = "TR000000000000000000000002";
 
     public TransferServiceTests()
     {
@@ -29,13 +36,19 @@ public class TransferServiceTests
         _transferRepositoryMock = new Mock<ITransactionRepository>();
         _auditRepositoryMock = new Mock<ITransactionAuditRepository>();
 
-        _transferService = new TransactionService(
+        var transactionFactory = new TransactionFactory();
+        var retryExecutor = new ConcurrencyRetryExecutor(
+            _auditRepositoryMock.Object);
+
+        _transferHandler = new TransferHandler(
             _unitOfWorkMock.Object,
             _transferRepositoryMock.Object,
             _accountRepositoryMock.Object,
             new TransferCommandValidator(),
             new TransferBusinessRules(),
-            _auditRepositoryMock.Object);
+            _auditRepositoryMock.Object,
+            transactionFactory,
+            retryExecutor);
     }
 
     [Theory]
@@ -43,20 +56,14 @@ public class TransferServiceTests
     [InlineData(-100)]
     public async Task TransferAsync_ShouldThrowValidationException_WhenAmountIsZeroOrNegative(decimal amount)
     {
-        // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
-        // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        // Arrange & Act
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
+                SenderIban,
+                ReceiverIban,
                 amount,
-                currencyCode,
-                idempotencyKey));
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -69,20 +76,14 @@ public class TransferServiceTests
     [Fact]
     public async Task TransferAsync_ShouldThrowValidationException_WhenSenderAndReceiverAreSame()
     {
-        // Arrange
-        var accountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
-        // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        // Arrange & Act
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                accountId,
-                accountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                SenderIban,
+                100.00m,
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -92,20 +93,14 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldReturnExistingTransfer_WhenIdempotencyKeyAlreadyExists()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "duplicate-key";
-
         var existingTransfer = new Transaction
         {
             Id = Guid.NewGuid(),
-            SenderAccountId = senderAccountId,
-            ReceiverAccountId = receiverAccountId,
-            Amount = amount,
-            CurrencyCode = currencyCode,
-            IdempotencyKey = idempotencyKey,
+            SenderIban = SenderIban,
+            ReceiverIban = ReceiverIban,
+            Amount = 100.00m,
+            CurrencyCode = "USD",
+            IdempotencyKey = "duplicate-key",
             Status = TransferStatus.COMPLETED
         };
 
@@ -114,18 +109,17 @@ public class TransferServiceTests
             .ReturnsAsync(existingTransfer);
 
         // Act
-        var result = await _transferService.TransferAsync(
+        var result = await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "USD",
+                "duplicate-key"));
 
         // Assert
         result.Should().BeEquivalentTo(existingTransfer);
-        // Ensure no storage operations or state updates were made for this request
-        _accountRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _accountRepositoryMock.Verify(r => r.GetByIbanForUpdateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _accountRepositoryMock.Verify(r => r.Update(It.IsAny<Account>()), Times.Never);
         _transferRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -139,28 +133,22 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowAccountNotFoundException_WhenSenderAccountDoesNotExist()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Account?)null);
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotFoundException>();
@@ -170,41 +158,35 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowAccountNotFoundException_WhenReceiverAccountDoesNotExist()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Account?)null);
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotFoundException>();
@@ -216,16 +198,10 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowAccountNotActiveException_WhenAccountIsNotActive(string inactiveStatus)
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = inactiveStatus
@@ -233,33 +209,33 @@ public class TransferServiceTests
 
         var receiverAccount = new Account
         {
-            Id = receiverAccountId,
-            Iban = "ACC-RECEIVER",
+            Id = Guid.NewGuid(),
+            Iban = ReceiverIban,
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(receiverAccount);
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<AccountNotActiveException>();
@@ -269,16 +245,10 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowCurrencyMismatchException_WhenCurrenciesDoNotMatch()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "EUR"; // Requested transfer currency
-        var idempotencyKey = "key-123";
-
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD", // Account currency mismatched
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -286,33 +256,33 @@ public class TransferServiceTests
 
         var receiverAccount = new Account
         {
-            Id = receiverAccountId,
-            Iban = "ACC-RECEIVER",
+            Id = Guid.NewGuid(),
+            Iban = ReceiverIban,
             CurrencyCode = "EUR",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(receiverAccount);
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "EUR", // Requested transfer currency
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<CurrencyMismatchException>();
@@ -322,16 +292,11 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowInsufficientFundsException_AndLogFailure_WhenSenderBalanceIsInsufficient()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
         var amount = 1500.00m; // More than sender's balance
-        var currencyCode = "USD";
-        var idempotencyKey = "key-123";
-
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -339,38 +304,38 @@ public class TransferServiceTests
 
         var receiverAccount = new Account
         {
-            Id = receiverAccountId,
-            Iban = "ACC-RECEIVER",
+            Id = Guid.NewGuid(),
+            Iban = ReceiverIban,
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(receiverAccount);
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
+                SenderIban,
+                ReceiverIban,
                 amount,
-                currencyCode,
-                idempotencyKey));
+                "USD",
+                "key-123"));
 
         // Assert
         await act.Should().ThrowAsync<InsufficientFundsException>();
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.Is<Transaction>(t => t.Amount == amount && t.CurrencyCode == currencyCode && t.SenderAccount == senderAccount && t.ReceiverAccount == receiverAccount),
+            It.Is<Transaction>(t => t.Amount == amount && t.CurrencyCode == "USD" && t.SenderAccount == senderAccount && t.ReceiverAccount == receiverAccount),
             AuditEventType.FAILED,
             It.IsAny<string>()), Times.Once);
     }
@@ -379,17 +344,13 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldExecuteTransferSuccessfully_WhenValidationsPass()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
         var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-success";
         var description = "Standard Transfer";
 
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -397,23 +358,23 @@ public class TransferServiceTests
 
         var receiverAccount = new Account
         {
-            Id = receiverAccountId,
-            Iban = "ACC-RECEIVER",
+            Id = Guid.NewGuid(),
+            Iban = ReceiverIban,
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(receiverAccount);
 
         _transferRepositoryMock
@@ -425,13 +386,13 @@ public class TransferServiceTests
             .ReturnsAsync(1);
 
         // Act
-        var result = await _transferService.TransferAsync(
+        var result = await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
+                SenderIban,
+                ReceiverIban,
                 amount,
-                currencyCode,
-                idempotencyKey,
+                "USD",
+                "key-success",
                 description));
 
         // Assert
@@ -440,12 +401,13 @@ public class TransferServiceTests
 
         result.Should().NotBeNull();
         result.Amount.Should().Be(amount);
-        result.CurrencyCode.Should().Be(currencyCode);
-        result.SenderAccountId.Should().Be(senderAccountId);
-        result.ReceiverAccountId.Should().Be(receiverAccountId);
-        result.IdempotencyKey.Should().Be(idempotencyKey);
+        result.CurrencyCode.Should().Be("USD");
+        result.SenderAccountId.Should().Be(senderAccount.Id);
+        result.ReceiverAccountId.Should().Be(receiverAccount.Id);
+        result.IdempotencyKey.Should().Be("key-success");
         result.Description.Should().Be(description);
         result.Status.Should().Be(TransferStatus.COMPLETED);
+        result.TransactionType.Should().Be(TransactionTypes.TRANSFER);
 
         _accountRepositoryMock.Verify(r => r.Update(senderAccount), Times.Once);
         _accountRepositoryMock.Verify(r => r.Update(receiverAccount), Times.Once);
@@ -461,16 +423,10 @@ public class TransferServiceTests
     public async Task TransferAsync_ShouldThrowConcurrencyException_WhenRowVersionMismatchOccurs()
     {
         // Arrange
-        var senderAccountId = Guid.NewGuid();
-        var receiverAccountId = Guid.NewGuid();
-        var amount = 100.00m;
-        var currencyCode = "USD";
-        var idempotencyKey = "key-concurrency";
-
         var senderAccount = new Account
         {
-            Id = senderAccountId,
-            Iban = "ACC-SENDER",
+            Id = Guid.NewGuid(),
+            Iban = SenderIban,
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -478,23 +434,23 @@ public class TransferServiceTests
 
         var receiverAccount = new Account
         {
-            Id = receiverAccountId,
-            Iban = "ACC-RECEIVER",
+            Id = Guid.NewGuid(),
+            Iban = ReceiverIban,
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
         };
 
         _transferRepositoryMock
-            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Transaction>());
+            .Setup(r => r.GetAsync(It.IsAny<System.Linq.Expressions.Expression<Func<Transaction, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Transaction?)null);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(senderAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(SenderIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(senderAccount);
 
         _accountRepositoryMock
-            .Setup(r => r.GetByIdAsync(receiverAccountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIbanForUpdateAsync(ReceiverIban, It.IsAny<CancellationToken>()))
             .ReturnsAsync(receiverAccount);
 
         _unitOfWorkMock
@@ -502,18 +458,18 @@ public class TransferServiceTests
             .ThrowsAsync(new DbUpdateConcurrencyException("Optimistic concurrency error occurred"));
 
         // Act
-        Func<Task> act = async () => await _transferService.TransferAsync(
+        Func<Task> act = async () => await _transferHandler.HandleAsync(
             new TransferCommand(
-                senderAccountId,
-                receiverAccountId,
-                amount,
-                currencyCode,
-                idempotencyKey));
+                SenderIban,
+                ReceiverIban,
+                100.00m,
+                "USD",
+                "key-concurrency"));
 
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
-            It.Is<Transaction>(t => t.IdempotencyKey == idempotencyKey),
+            It.Is<Transaction>(t => t.IdempotencyKey == "key-concurrency"),
             AuditEventType.FAILED,
             It.IsAny<string>()), Times.Once);
     }

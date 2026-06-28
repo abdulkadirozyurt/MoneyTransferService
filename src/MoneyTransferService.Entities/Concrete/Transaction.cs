@@ -8,6 +8,7 @@ public sealed class Transaction : Entity
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = default!;
     public string Status { get; set; } = TransferStatus.PENDING;
+    public string TransactionType { get; set; } = TransactionTypes.TRANSFER;
     public string? Description { get; set; }
 
     // prevents duplicate transfer requests in case of network issues or retries
@@ -17,11 +18,11 @@ public sealed class Transaction : Entity
     public string? FailureReason { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
 
-    public string SenderIban { get; set; } = null!;
-    public Guid SenderAccountId { get; set; }
-    public Account SenderAccount { get; set; } = null!;
+    public string? SenderIban { get; set; }
+    public Guid? SenderAccountId { get; set; }
+    public Account? SenderAccount { get; set; }
 
-    public string ReceiverIban { get; set; } = null!;
-    public Guid ReceiverAccountId { get; set; }
-    public Account ReceiverAccount { get; set; } = null!;
+    public string? ReceiverIban { get; set; }
+    public Guid? ReceiverAccountId { get; set; }
+    public Account? ReceiverAccount { get; set; }
 }

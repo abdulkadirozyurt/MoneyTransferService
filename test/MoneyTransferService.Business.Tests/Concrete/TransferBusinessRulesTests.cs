@@ -1,6 +1,6 @@
 using System;
 using FluentAssertions;
-using MoneyTransferService.Business.BusinessRules;
+using MoneyTransferService.Business.Concrete.BusinessRules;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Entities.Concrete;
@@ -19,7 +19,7 @@ public class TransferBusinessRulesTests
         var account = CreateAccount();
 
         // Act
-        var result = _businessRules.EnsureAccountExists(account, "Sender", account.Id);
+        var result = _businessRules.EnsureAccountExists(account, "Sender", account.Iban);
 
         // Assert
         result.Should().BeSameAs(account);
@@ -29,10 +29,10 @@ public class TransferBusinessRulesTests
     public void EnsureAccountExists_ShouldThrowAccountNotFoundException_WhenAccountDoesNotExist()
     {
         // Arrange
-        var accountId = Guid.NewGuid();
+        var iban = "TR000000000000000000000001";
 
         // Act
-        Action act = () => _businessRules.EnsureAccountExists(null, "Sender", accountId);
+        Action act = () => _businessRules.EnsureAccountExists(null, "Sender", iban);
 
         // Assert
         act.Should().Throw<AccountNotFoundException>();

@@ -12,12 +12,14 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .HasOne(t => t.SenderAccount)
             .WithMany(a => a.OutgoingTransfers)
             .HasForeignKey(t => t.SenderAccountId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
             .HasOne(t => t.ReceiverAccount)
             .WithMany(a => a.IncomingTransfers)
             .HasForeignKey(t => t.ReceiverAccountId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
@@ -38,13 +40,19 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .HasMaxLength(20);
 
         builder
-            .Property(t => t.SenderIban)
+            .Property(t => t.TransactionType)
             .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("TRANSFER");
+
+        builder
+            .Property(t => t.SenderIban)
+            .IsRequired(false)
             .HasMaxLength(34);
 
         builder
             .Property(t => t.ReceiverIban)
-            .IsRequired()
+            .IsRequired(false)
             .HasMaxLength(34);
     }
 }

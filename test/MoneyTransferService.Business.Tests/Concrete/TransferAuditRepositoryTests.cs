@@ -47,7 +47,9 @@ public class TransferAuditRepositoryTests
         {
             Amount = 250.00m,
             CurrencyCode = "USD",
+            SenderIban = senderAccount.Iban,
             SenderAccount = senderAccount,
+            ReceiverIban = receiverAccount.Iban,
             ReceiverAccount = receiverAccount,
             FailureReason = "Original failure reason"
         };
@@ -77,8 +79,8 @@ public class TransferAuditRepositoryTests
         capturedLog.Should().NotBeNull();
         capturedLog!.TransactionId.Should().Be(transfer.Id);
         capturedLog.EventType.Should().Be(eventType);
-        capturedLog.SenderAccountNumber.Should().Be(senderAccount.Iban);
-        capturedLog.ReceiverAccountNumber.Should().Be(receiverAccount.Iban);
+        capturedLog.SenderIban.Should().Be(senderAccount.Iban);
+        capturedLog.ReceiverIban.Should().Be(receiverAccount.Iban);
         capturedLog.Amount.Should().Be(transfer.Amount);
         capturedLog.CurrencyCode.Should().Be(transfer.CurrencyCode);
         capturedLog.FailureReason.Should().Be(failureReason);

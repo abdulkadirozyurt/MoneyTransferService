@@ -1,6 +1,6 @@
 using MoneyTransferService.Entities.Concrete;
 
-namespace MoneyTransferService.Business.Abstract;
+namespace MoneyTransferService.Business.Abstract.BusinessRules;
 
 public interface ITransferBusinessRules
 {

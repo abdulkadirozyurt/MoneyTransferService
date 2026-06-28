@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Abstract.Services;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.DataAccess.Abstract;
 using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
 
-namespace MoneyTransferService.Business.Concrete;
+namespace MoneyTransferService.Business.Concrete.Services;
 
 public class CustomerService(
     IUnitOfWork unitOfWork,

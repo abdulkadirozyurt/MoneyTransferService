@@ -1,6 +1,6 @@
 using MoneyTransferService.Entities.Concrete;
 
-namespace MoneyTransferService.Business.Abstract;
+namespace MoneyTransferService.Business.Abstract.Services;
 
 public interface IAccountService
 {

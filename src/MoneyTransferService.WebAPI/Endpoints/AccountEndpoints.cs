@@ -1,4 +1,4 @@
-using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Abstract.Services;
 using MoneyTransferService.WebAPI.Contracts;
 
 namespace MoneyTransferService.WebAPI.Endpoints;

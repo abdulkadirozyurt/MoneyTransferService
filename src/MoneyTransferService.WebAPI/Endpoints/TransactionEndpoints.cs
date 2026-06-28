@@ -1,4 +1,4 @@
-using MoneyTransferService.Business.Abstract;
+using MoneyTransferService.Business.Abstract.Services;
 using MoneyTransferService.Business.Requests;
 using MoneyTransferService.WebAPI.Contracts;
 
@@ -10,11 +10,47 @@ public static class TransactionEndpoints
     {
         var group = app.MapGroup("/transactions").WithTags("Transactions");
 
+        group.MapPost("/deposit", CreateDepositAsync).WithName("CreateDeposit");
+        group.MapPost("/withdraw", CreateWithdrawAsync).WithName("CreateWithdraw");
         group.MapPost("/transfer", CreateTransferAsync).WithName("CreateTransactionTransfer");
         group.MapGet("/{id:guid}", GetTransactionByIdAsync).WithName("GetTransactionById");
         group.MapGet("/history", GetTransactionHistoryAsync).WithName("GetTransactionHistory");
 
         return app;
+    }
+
+    private static async Task<IResult> CreateDepositAsync(
+        CreateDepositRequest request,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var command = new DepositCommand(
+            request.AccountIban,
+            request.Amount,
+            request.CurrencyCode,
+            request.IdempotencyKey,
+            request.Description);
+
+        var transaction = await transactionService.DepositAsync(command, cancellationToken);
+
+        return Results.Created($"/api/transactions/{transaction.Id}", TransactionResponse.FromTransaction(transaction));
+    }
+
+    private static async Task<IResult> CreateWithdrawAsync(
+        CreateWithdrawRequest request,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var command = new WithdrawCommand(
+            request.AccountIban,
+            request.Amount,
+            request.CurrencyCode,
+            request.IdempotencyKey,
+            request.Description);
+
+        var transaction = await transactionService.WithdrawAsync(command, cancellationToken);
+
+        return Results.Created($"/api/transactions/{transaction.Id}", TransactionResponse.FromTransaction(transaction));
     }
 
     private static async Task<IResult> CreateTransferAsync(
