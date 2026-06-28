@@ -31,14 +31,14 @@ public class TransferAuditRepositoryTests
         // Arrange
         var senderAccount = new Account
         {
-            AccountNumber = "ACC-12345",
+            Iban = "ACC-12345",
             CurrencyCode = "USD",
             Balance = 1000.00m
         };
 
         var receiverAccount = new Account
         {
-            AccountNumber = "ACC-67890",
+            Iban = "ACC-67890",
             CurrencyCode = "USD",
             Balance = 500.00m
         };
@@ -77,8 +77,8 @@ public class TransferAuditRepositoryTests
         capturedLog.Should().NotBeNull();
         capturedLog!.TransactionId.Should().Be(transfer.Id);
         capturedLog.EventType.Should().Be(eventType);
-        capturedLog.SenderAccountNumber.Should().Be(senderAccount.AccountNumber);
-        capturedLog.ReceiverAccountNumber.Should().Be(receiverAccount.AccountNumber);
+        capturedLog.SenderAccountNumber.Should().Be(senderAccount.Iban);
+        capturedLog.ReceiverAccountNumber.Should().Be(receiverAccount.Iban);
         capturedLog.Amount.Should().Be(transfer.Amount);
         capturedLog.CurrencyCode.Should().Be(transfer.CurrencyCode);
         capturedLog.FailureReason.Should().Be(failureReason);
@@ -89,8 +89,8 @@ public class TransferAuditRepositoryTests
     public async Task LogTransferAsync_ShouldUseParameterFailureReason_WhenProvided()
     {
         // Arrange
-        var senderAccount = new Account { AccountNumber = "ACC-1" };
-        var receiverAccount = new Account { AccountNumber = "ACC-2" };
+        var senderAccount = new Account { Iban = "ACC-1" };
+        var receiverAccount = new Account { Iban = "ACC-2" };
         var transfer = new Transaction
         {
             SenderAccount = senderAccount,
@@ -115,8 +115,8 @@ public class TransferAuditRepositoryTests
     public async Task LogTransferAsync_ShouldFallBackToTransferFailureReason_WhenParameterIsNull()
     {
         // Arrange
-        var senderAccount = new Account { AccountNumber = "ACC-1" };
-        var receiverAccount = new Account { AccountNumber = "ACC-2" };
+        var senderAccount = new Account { Iban = "ACC-1" };
+        var receiverAccount = new Account { Iban = "ACC-2" };
         var transfer = new Transaction
         {
             SenderAccount = senderAccount,

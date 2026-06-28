@@ -9,6 +9,7 @@ import {
   deriveJsonReportPath,
   buildReportMetadata,
   assertSafeLoadTarget,
+  fixtureIban,
 } from "../../../lib/seed-helper.js";
 
 const status200 = new Counter("status_200");
@@ -49,9 +50,14 @@ const CURRENCY_CODE = "TRY";
 const SCENARIO_NAME = "hotspot-load";
 const TEST_DOC = open("./README.md");
 const RECEIVER_ACCOUNT_ID = "21000000-0000-7000-8000-000000000001";
+const RECEIVER_IBAN = fixtureIban("20", 1);
 const SENDER_ACCOUNT_IDS = Array.from(
   { length: 50 },
   (_, index) => `21000000-0000-7000-8000-${String(index + 101).padStart(12, "0")}`
+);
+const SENDER_IBANS = Array.from(
+  { length: 50 },
+  (_, index) => fixtureIban("20", index + 101)
 );
 
 assertSafeLoadTarget(BASE_URL);
@@ -67,15 +73,16 @@ export function setup() {
 
   return {
     receiverAccountId: RECEIVER_ACCOUNT_ID,
-    senderAccounts: SENDER_ACCOUNT_IDS.map((id) => ({ id })),
+    receiverIban: RECEIVER_IBAN,
+    senderAccounts: SENDER_ACCOUNT_IDS.map((id, index) => ({ id, iban: SENDER_IBANS[index] })),
   };
 }
 
 export default function (data) {
   const sender = data.senderAccounts[(__VU - 1) % data.senderAccounts.length];
   const payload = JSON.stringify({
-    senderAccountId: sender.id,
-    receiverAccountId: data.receiverAccountId,
+    senderIban: sender.iban,
+    receiverIban: data.receiverIban,
     amount: 3000,
     currencyCode: CURRENCY_CODE,
     description: "Hotspot load scenario transfer",

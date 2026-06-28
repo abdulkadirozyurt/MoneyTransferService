@@ -9,30 +9,32 @@ public class Repository<TEntity, TContext>(TContext context) : IRepository<TEnti
     where TEntity : Entity
     where TContext : DbContext
 {
-    private DbSet<TEntity> Entity => context.Set<TEntity>();
-    public async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    protected readonly TContext Context = context;
+    protected readonly DbSet<TEntity> Entities = context.Set<TEntity>();
+
+    public async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await Task.FromResult(Entity.AsEnumerable());
+        return await Entities.ToListAsync(cancellationToken);
     }
 
     public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await Entity.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        return await Entities.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public async Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
     {
-        return await Entity.FirstOrDefaultAsync(filter, cancellationToken);
+        return await Entities.FirstOrDefaultAsync(filter, cancellationToken);
     }
 
     public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        await Entity.AddAsync(entity, cancellationToken);
+        await Entities.AddAsync(entity, cancellationToken);
     }
 
     public void Update(TEntity entity)
     {
-        Entity.Update(entity);
+        Entities.Update(entity);
     }
 
     public void Delete(TEntity entity)

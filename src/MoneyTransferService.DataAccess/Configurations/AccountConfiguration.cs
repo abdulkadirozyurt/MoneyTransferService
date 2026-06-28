@@ -40,20 +40,17 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .HasMaxLength(20);
 
         builder
-            .Property(t => t.AccountNumber)
+            .Property(t => t.Iban)
             .IsRequired()
             .HasMaxLength(34);
 
         builder
-            .HasIndex(t => t.AccountNumber)
+            .HasIndex(t => t.Iban)
             .IsUnique();
 
         builder
             .Property(a => a.CurrencyCode)
             .IsRequired()
             .HasMaxLength(3);
-
-
-
     }
 }

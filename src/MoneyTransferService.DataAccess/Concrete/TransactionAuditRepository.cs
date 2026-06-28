@@ -22,8 +22,8 @@ public class TransactionAuditRepository : ITransactionAuditRepository
         {
             TransactionId = transfer.Id,
             EventType = eventType,
-            SenderAccountNumber = transfer.SenderAccount?.AccountNumber ?? string.Empty,
-            ReceiverAccountNumber = transfer.ReceiverAccount?.AccountNumber ?? string.Empty,
+            SenderIban = transfer.SenderIban,
+            ReceiverIban = transfer.ReceiverIban,
             Amount = transfer.Amount,
             CurrencyCode = transfer.CurrencyCode ?? string.Empty,
             FailureReason = failureReason ?? transfer.FailureReason,

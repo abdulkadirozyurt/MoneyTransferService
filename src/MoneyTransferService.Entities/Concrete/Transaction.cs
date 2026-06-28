@@ -17,9 +17,11 @@ public sealed class Transaction : Entity
     public string? FailureReason { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
 
+    public string SenderIban { get; set; } = null!;
     public Guid SenderAccountId { get; set; }
     public Account SenderAccount { get; set; } = null!;
 
+    public string ReceiverIban { get; set; } = null!;
     public Guid ReceiverAccountId { get; set; }
     public Account ReceiverAccount { get; set; } = null!;
 }

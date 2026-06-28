@@ -1,8 +1,8 @@
 namespace MoneyTransferService.Business.Requests;
 
 public sealed record TransferCommand(
-    Guid SenderAccountId,
-    Guid ReceiverAccountId,
+    string SenderIban,
+    string ReceiverIban,
     decimal Amount,
     string CurrencyCode,
     string IdempotencyKey,

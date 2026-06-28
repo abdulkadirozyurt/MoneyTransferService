@@ -10,6 +10,7 @@ import {
   deriveJsonReportPath,
   buildReportMetadata,
   assertSafeLoadTarget,
+  fixtureIban,
 } from "../../../lib/seed-helper.js";
 
 const status200 = new Counter("status_200");
@@ -46,9 +47,14 @@ const CURRENCY_CODE = "TRY";
 const SCENARIO_NAME = "overdraft-race";
 const TEST_DOC = open("./README.md");
 const SENDER_ACCOUNT_ID = "20000000-0000-7000-8000-000000000001";
+const SENDER_IBAN = fixtureIban("10", 1);
 const RECEIVER_ACCOUNT_IDS = Array.from(
   { length: 20 },
   (_, index) => `20000000-0000-7000-8000-${String(index + 101).padStart(12, "0")}`
+);
+const RECEIVER_IBANS = Array.from(
+  { length: 20 },
+  (_, index) => fixtureIban("10", index + 101)
 );
 
 assertSafeLoadTarget(BASE_URL);
@@ -64,15 +70,17 @@ export function setup() {
 
   return {
     senderAccountId: SENDER_ACCOUNT_ID,
+    senderIban: SENDER_IBAN,
     receiverAccountIds: RECEIVER_ACCOUNT_IDS,
+    receiverIbans: RECEIVER_IBANS,
   };
 }
 
 export default function (data) {
-  const receiverAccountId = data.receiverAccountIds[(__VU - 1) % data.receiverAccountIds.length];
+  const receiverIban = data.receiverIbans[(__VU - 1) % data.receiverIbans.length];
   const payload = JSON.stringify({
-    senderAccountId: data.senderAccountId,
-    receiverAccountId,
+    senderIban: data.senderIban,
+    receiverIban,
     amount: 100,
     currencyCode: CURRENCY_CODE,
     description: "Overdraft race scenario transfer",

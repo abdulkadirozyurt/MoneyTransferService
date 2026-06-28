@@ -7,15 +7,21 @@ public sealed class TransferCommandValidator : AbstractValidator<TransferCommand
 {
     public TransferCommandValidator()
     {
-        RuleFor(x => x.SenderAccountId)
+        RuleFor(x => x.SenderIban)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .WithMessage("Sender account ID is required.");
+            .WithMessage("Sender IBAN is required.")
+            .Length(26)
+            .WithMessage("Sender IBAN must be 26 characters long.");
 
-        RuleFor(x => x.ReceiverAccountId)
+        RuleFor(x => x.ReceiverIban)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .WithMessage("Receiver account ID is required.")
-            .NotEqual(x => x.SenderAccountId)
-            .WithMessage("Sender and receiver accounts cannot be the same.");
+            .WithMessage("Receiver IBAN is required.")
+            .Length(26)
+            .WithMessage("Receiver IBAN must be 26 characters long.")
+            .NotEqual(x => x.SenderIban)
+            .WithMessage("Sender and receiver IBANs cannot be the same.");
 
         RuleFor(x => x.Amount)
             .GreaterThan(0)

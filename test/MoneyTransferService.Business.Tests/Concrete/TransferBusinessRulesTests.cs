@@ -128,7 +128,7 @@ public class TransferBusinessRulesTests
         return new Account
         {
             Id = Guid.NewGuid(),
-            AccountNumber = "ACC-TEST",
+            Iban = "ACC-TEST",
             CurrencyCode = currencyCode,
             Balance = balance,
             Status = status

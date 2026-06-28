@@ -22,7 +22,7 @@ public sealed record AccountResponse(
     {
         return new AccountResponse(
             account.Id,
-            account.AccountNumber,
+            account.Iban,
             account.CurrencyCode,
             account.Balance,
             account.Status,

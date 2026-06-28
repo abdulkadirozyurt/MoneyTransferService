@@ -85,14 +85,6 @@ public class TransactionService(
 
 
 
-
-
-
-
-
-
-
-
     private async Task<Transaction> ExecuteTransferAttemptAsync(TransferCommand request, CancellationToken cancellationToken)
     {
         await unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -140,7 +132,7 @@ public class TransactionService(
         await transactionRepository.AddAsync(transfer, cancellationToken);
     }
 
-    private async Task EnsureTransferCanBeCompletedAsync(TransferCommand request, TransferAccounts transferAccounts)
+    private async Task EnsureTransferCanBeCompletedAsync(TransferCommand request, TransactionAccounts transferAccounts)
     {
         transferBusinessRules.EnsureAccountIsActive(transferAccounts.SenderAccount, AccountRole.SENDER);
         transferBusinessRules.EnsureAccountIsActive(transferAccounts.ReceiverAccount, AccountRole.RECEIVER);
@@ -168,19 +160,28 @@ public class TransactionService(
         }
     }
 
-    private async Task<TransferAccounts> GetTransferAccountsAsync(IRepository<Account> accountRepository, TransferCommand request, CancellationToken cancellationToken)
+    private async Task<TransactionAccounts> GetTransferAccountsAsync(IAccountRepository accountRepository, TransferCommand request, CancellationToken cancellationToken)
     {
-        var senderAccount = transferBusinessRules.EnsureAccountExists(
-            await accountRepository.GetByIdAsync(request.SenderAccountId, cancellationToken),
-            AccountRole.SENDER,
-            request.SenderAccountId);
+        // locking the accounts for update to prevent deadlocks
+        // Locking by IBAN Order: Always lock the account with the smaller IBAN first to prevent deadlocks.
+        var senderComesFirst = string.CompareOrdinal(request.SenderIban, request.ReceiverIban) < 0;
 
-        var receiverAccount = transferBusinessRules.EnsureAccountExists(
-            await accountRepository.GetByIdAsync(request.ReceiverAccountId, cancellationToken),
-            AccountRole.RECEIVER,
-            request.ReceiverAccountId);
+        var firstAccountIban = senderComesFirst ? request.SenderIban : request.ReceiverIban;
+        var secondAccountIban = senderComesFirst ? request.ReceiverIban : request.SenderIban;
 
-        return new TransferAccounts(senderAccount, receiverAccount);
+        var firstAccount = await accountRepository.GetByIbanForUpdateAsync(firstAccountIban, cancellationToken);
+        var secondAccount = await accountRepository.GetByIbanForUpdateAsync(secondAccountIban, cancellationToken);
+
+
+        // split sender and receiver
+
+        var senderAccount = firstAccountIban == request.SenderIban ? firstAccount : secondAccount;
+        var receiverAccount = firstAccountIban == request.ReceiverIban ? firstAccount : secondAccount;
+
+        var sender = transferBusinessRules.EnsureAccountExists(senderAccount, AccountRole.SENDER, request.SenderIban);
+        var receiver = transferBusinessRules.EnsureAccountExists(receiverAccount, AccountRole.RECEIVER, request.ReceiverIban);
+
+        return new TransactionAccounts(sender, receiver);
     }
 
     // Idempotency check: If a transfer with the same IdempotencyKey already exists, return it instead of creating a new one.
@@ -198,7 +199,7 @@ public class TransactionService(
         }
     }
 
-    private static void ApplyTransferBalanceChanges(TransferCommand request, TransferAccounts transferAccounts, IRepository<Account> accountRepository)
+    private static void ApplyTransferBalanceChanges(TransferCommand request, TransactionAccounts transferAccounts, IRepository<Account> accountRepository)
     {
         transferAccounts.SenderAccount.Debit(request.Amount);
         transferAccounts.ReceiverAccount.Deposit(request.Amount);
@@ -207,15 +208,17 @@ public class TransactionService(
         accountRepository.Update(transferAccounts.ReceiverAccount);
     }
 
-    private static Transaction CreatePendingTransfer(TransferCommand request, TransferAccounts transferAccounts)
+    private static Transaction CreatePendingTransfer(TransferCommand request, TransactionAccounts transferAccounts)
     {
         return new Transaction
         {
             Amount = request.Amount,
             CurrencyCode = request.CurrencyCode,
-            SenderAccountId = request.SenderAccountId,
+            SenderIban = transferAccounts.SenderAccount.Iban,
+            SenderAccountId = transferAccounts.SenderAccount.Id,
             SenderAccount = transferAccounts.SenderAccount,
-            ReceiverAccountId = request.ReceiverAccountId,
+            ReceiverIban = transferAccounts.ReceiverAccount.Iban,
+            ReceiverAccountId = transferAccounts.ReceiverAccount.Id,
             ReceiverAccount = transferAccounts.ReceiverAccount,
             IdempotencyKey = request.IdempotencyKey,
             Description = request.Description,
@@ -235,8 +238,8 @@ public class TransactionService(
             Id = transferId ?? Guid.Empty,
             Amount = request.Amount,
             CurrencyCode = request.CurrencyCode,
-            SenderAccountId = request.SenderAccountId,
-            ReceiverAccountId = request.ReceiverAccountId,
+            SenderIban = request.SenderIban,
+            ReceiverIban = request.ReceiverIban,
             IdempotencyKey = request.IdempotencyKey,
             Status = TransferStatus.FAILED,
             FailureReason = failureReason
@@ -254,11 +257,7 @@ public class TransactionService(
 
         return transfer;
     }
-
-
-
-    private sealed record TransferAccounts(Account SenderAccount, Account ReceiverAccount);
-
 }
+sealed record TransactionAccounts(Account SenderAccount, Account ReceiverAccount);
 
 

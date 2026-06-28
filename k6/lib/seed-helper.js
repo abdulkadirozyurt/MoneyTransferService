@@ -84,6 +84,20 @@ export function verifyAccounts(baseUrl, accountIds, scenarioName) {
   }
 }
 
+export function fixtureIban(accountSuffixPrefix, fixtureIndex) {
+  const accountSuffix = `${accountSuffixPrefix}${String(fixtureIndex).padStart(14, "0")}`;
+  const bban = `000010${accountSuffix}`;
+  const numericIban = `${bban}292700`; // T=29, R=27, check digits placeholder=00.
+  let remainder = 0;
+
+  for (const digit of numericIban) {
+    remainder = (remainder * 10 + Number(digit)) % 97;
+  }
+
+  const checkDigits = String(98 - remainder).padStart(2, "0");
+  return `TR${checkDigits}${bban}`;
+}
+
 /**
  * Increment the right status counter based on the response status code.
  * Centralised here to remove the duplicated trackStatus() that used to live in

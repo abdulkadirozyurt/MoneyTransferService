@@ -7,11 +7,11 @@ namespace MoneyTransferService.Business.BusinessRules;
 
 public sealed class TransferBusinessRules : ITransferBusinessRules
 {
-    public Account EnsureAccountExists(Account? account, string accountRole, Guid accountId)
+    public Account EnsureAccountExists(Account? account, string accountRole, string iban)
     {
         if (account == null)
         {
-            throw new AccountNotFoundException($"{accountRole} account with ID {accountId} not found.");
+            throw new AccountNotFoundException($"{accountRole} account with IBAN {iban} not found.");
         }
 
         return account;

@@ -17,7 +17,7 @@ public class AccountEntityTests
             Balance = 1000m,
             Status = AccountStatus.ACTIVE,
             CurrencyCode = "USD",
-            AccountNumber = "ACC-123"
+            Iban = "ACC-123"
         };
 
         // Act
@@ -64,7 +64,7 @@ public class AccountEntityTests
             Balance = 1000m,
             Status = AccountStatus.ACTIVE,
             CurrencyCode = "USD",
-            AccountNumber = "ACC-123"
+            Iban = "ACC-123"
         };
 
         // Act

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MoneyTransferService.Business.Abstract;
 using MoneyTransferService.Business.BusinessRules;
 using MoneyTransferService.Business.Concrete;
+using MoneyTransferService.Business.Options;
 
 namespace MoneyTransferService.Business;
 
@@ -15,6 +16,8 @@ public static class BusinessServiceRegistration
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<ITransferBusinessRules, TransferBusinessRules>();
+        services.AddScoped<IIbanGenerator, TrIBanGenerator>();
+        services.AddScoped<IbanOptions>();
         services.AddValidatorsFromAssembly(typeof(BusinessServiceRegistration).Assembly);
         return services;
     }

@@ -36,5 +36,15 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .Property(t => t.Status)
             .IsRequired()
             .HasMaxLength(20);
+
+        builder
+            .Property(t => t.SenderIban)
+            .IsRequired()
+            .HasMaxLength(34);
+
+        builder
+            .Property(t => t.ReceiverIban)
+            .IsRequired()
+            .HasMaxLength(34);
     }
 }

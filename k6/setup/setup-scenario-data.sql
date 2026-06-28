@@ -10,7 +10,7 @@ DECLARE @Fixtures TABLE
     FixtureIndex int NOT NULL,
     CustomerId uniqueidentifier NOT NULL,
     AccountId uniqueidentifier NOT NULL,
-    AccountNumber nvarchar(34) NOT NULL,
+    Iban nvarchar(34) NOT NULL,
     Email nvarchar(254) NOT NULL,
     PhoneNumber nvarchar(20) NOT NULL,
     FirstName nvarchar(100) NOT NULL,
@@ -34,7 +34,7 @@ VALUES
     @i,
     CONVERT(uniqueidentifier, CONCAT('10000000-0000-7000-8000-', @suffix)),
     CONVERT(uniqueidentifier, CONCAT('20000000-0000-7000-8000-', @suffix)),
-    CONCAT('TRK6OD', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+    CONCAT('10', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
     CONCAT('k6-overdraft-sender-', @i, '@example.com'),
     CONCAT('+905900', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
     'K6Overdraft',
@@ -56,7 +56,7 @@ BEGIN
         @i,
         CONVERT(uniqueidentifier, CONCAT('10000000-0000-7000-8000-', @suffix)),
         CONVERT(uniqueidentifier, CONCAT('20000000-0000-7000-8000-', @suffix)),
-        CONCAT('TRK6OD', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+        CONCAT('10', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
         CONCAT('k6-overdraft-receiver-', @i, '@example.com'),
         CONCAT('+905900', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
         'K6Overdraft',
@@ -79,7 +79,7 @@ VALUES
     @i,
     CONVERT(uniqueidentifier, CONCAT('11000000-0000-7000-8000-', @suffix)),
     CONVERT(uniqueidentifier, CONCAT('21000000-0000-7000-8000-', @suffix)),
-    CONCAT('TRK6HS', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+    CONCAT('20', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
     CONCAT('k6-hotspot-receiver-', @i, '@example.com'),
     CONCAT('+905910', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
     'K6Hotspot',
@@ -101,7 +101,7 @@ BEGIN
         @i,
         CONVERT(uniqueidentifier, CONCAT('11000000-0000-7000-8000-', @suffix)),
         CONVERT(uniqueidentifier, CONCAT('21000000-0000-7000-8000-', @suffix)),
-        CONCAT('TRK6HS', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+        CONCAT('20', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
         CONCAT('k6-hotspot-sender-', @i, '@example.com'),
         CONCAT('+905910', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
         'K6Hotspot',
@@ -122,7 +122,7 @@ VALUES
     1,
     CONVERT(uniqueidentifier, '33333333-3333-7333-8333-333333333330'),
     CONVERT(uniqueidentifier, '33333333-3333-7333-8333-333333333333'),
-    'TRK6BL00000000000000000001',
+    '3000000000000001',
     'k6-baseline-sender-1@example.com',
     '+905930000001',
     'K6Baseline',
@@ -139,7 +139,7 @@ VALUES
     2,
     CONVERT(uniqueidentifier, '44444444-4444-7444-8444-444444444440'),
     CONVERT(uniqueidentifier, '44444444-4444-7444-8444-444444444444'),
-    'TRK6BL00000000000000000002',
+    '3000000000000002',
     'k6-baseline-receiver-2@example.com',
     '+905930000002',
     'K6Baseline',
@@ -162,7 +162,7 @@ BEGIN
         @i,
         CONVERT(uniqueidentifier, CONCAT('12000000-0000-7000-8000-', @suffix)),
         CONVERT(uniqueidentifier, CONCAT('22000000-0000-7000-8000-', @suffix)),
-        CONCAT('TRK6SP', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+        CONCAT('40', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
         CONCAT('k6-spike-sender-', @i, '@example.com'),
         CONCAT('+905920', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
         'K6Spike',
@@ -187,7 +187,7 @@ BEGIN
         @i,
         CONVERT(uniqueidentifier, CONCAT('12000000-0000-7000-8000-', @suffix)),
         CONVERT(uniqueidentifier, CONCAT('22000000-0000-7000-8000-', @suffix)),
-        CONCAT('TRK6SP', RIGHT(REPLICATE('0', 20) + CAST(@i AS varchar(20)), 20)),
+        CONCAT('40', RIGHT(REPLICATE('0', 14) + CAST(@i AS varchar(14)), 14)),
         CONCAT('k6-spike-receiver-', @i, '@example.com'),
         CONCAT('+905920', RIGHT(REPLICATE('0', 6) + CAST(@i AS varchar(6)), 6)),
         'K6Spike',
@@ -198,6 +198,48 @@ BEGIN
 
     SET @i += 1;
 END;
+
+-- Convert deterministic 16-digit account suffixes into valid Turkish IBANs.
+-- TR IBAN: TR + 2 check digits + 5 bank code + 1 reserve digit + 16 account suffix.
+DECLARE @IbanAccountId uniqueidentifier;
+DECLARE @AccountSuffix nvarchar(16);
+DECLARE @Bban nvarchar(22);
+DECLARE @NumericIban nvarchar(40);
+DECLARE @Remainder int;
+DECLARE @Position int;
+DECLARE @CheckDigits int;
+
+DECLARE iban_cursor CURSOR LOCAL FAST_FORWARD FOR
+SELECT AccountId, Iban
+FROM @Fixtures;
+
+OPEN iban_cursor;
+FETCH NEXT FROM iban_cursor INTO @IbanAccountId, @AccountSuffix;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @Bban = CONCAT('00001', '0', @AccountSuffix);
+    SET @NumericIban = CONCAT(@Bban, '292700'); -- T=29, R=27, check digits placeholder=00.
+    SET @Remainder = 0;
+    SET @Position = 1;
+
+    WHILE @Position <= LEN(@NumericIban)
+    BEGIN
+        SET @Remainder = (@Remainder * 10 + CAST(SUBSTRING(@NumericIban, @Position, 1) AS int)) % 97;
+        SET @Position += 1;
+    END;
+
+    SET @CheckDigits = 98 - @Remainder;
+
+    UPDATE @Fixtures
+    SET Iban = CONCAT('TR', RIGHT(CONCAT('0', CAST(@CheckDigits AS varchar(2))), 2), @Bban)
+    WHERE AccountId = @IbanAccountId;
+
+    FETCH NEXT FROM iban_cursor INTO @IbanAccountId, @AccountSuffix;
+END;
+
+CLOSE iban_cursor;
+DEALLOCATE iban_cursor;
 
 DECLARE @DeletedTransactions int;
 DECLARE @InsertedCustomers int;
@@ -264,7 +306,7 @@ INSERT INTO Accounts
     UpdatedAt,
     DeletedAt,
     IsDeleted,
-    AccountNumber,
+    Iban,
     CurrencyCode,
     Balance,
     Status,
@@ -277,7 +319,7 @@ SELECT
     NULL,
     NULL,
     0,
-    f.AccountNumber,
+    f.Iban,
     'TRY',
     f.Balance,
     'ACTIVE',
@@ -293,7 +335,7 @@ WHERE NOT EXISTS
 SET @InsertedAccounts = @@ROWCOUNT;
 
 UPDATE a
-SET AccountNumber = f.AccountNumber,
+SET Iban = f.Iban,
     CurrencyCode = 'TRY',
     Balance = f.Balance,
     Status = 'ACTIVE',

@@ -3,8 +3,8 @@ using MoneyTransferService.Entities.Concrete;
 namespace MoneyTransferService.WebAPI.Contracts;
 
 public sealed record CreateTransferRequest(
-    Guid SenderAccountId,
-    Guid ReceiverAccountId,
+    string SenderIban,
+    string ReceiverIban,
     decimal Amount,
     string CurrencyCode,
     string IdempotencyKey,
@@ -12,8 +12,8 @@ public sealed record CreateTransferRequest(
 
 public sealed record TransactionResponse(
     Guid Id,
-    Guid SenderAccountId,
-    Guid ReceiverAccountId,
+    string SenderIban,
+    string ReceiverIban,
     decimal Amount,
     string CurrencyCode,
     string Status,
@@ -27,8 +27,8 @@ public sealed record TransactionResponse(
     {
         return new TransactionResponse(
             transaction.Id,
-            transaction.SenderAccountId,
-            transaction.ReceiverAccountId,
+            transaction.SenderIban,
+            transaction.ReceiverIban,
             transaction.Amount,
             transaction.CurrencyCode,
             transaction.Status,

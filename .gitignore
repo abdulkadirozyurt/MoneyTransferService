@@ -368,8 +368,8 @@ MigrationBackup/
 FodyWeavers.xsd
 
 
-
-Docs/
+Docs/*
+!Docs/PROJECT_STATUS.md
 .hermes/
 .claude/
 

@@ -52,7 +52,7 @@ public static class AccountEndpoints
             ? Results.NotFound(new { error = "Account not found." })
             : Results.Ok(new AccountBalanceResponse(
                 account.Id,
-                account.AccountNumber,
+                account.Iban,
                 account.CurrencyCode,
                 account.Balance,
                 account.Status));

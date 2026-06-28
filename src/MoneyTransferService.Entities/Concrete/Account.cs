@@ -6,7 +6,7 @@ namespace MoneyTransferService.Entities.Concrete;
 
 public sealed class Account : Entity
 {
-    public string AccountNumber { get; set; } = default!;
+    public string Iban { get; set; } = default!;
     public string CurrencyCode { get; set; } = default!;
     public decimal Balance { get; set; }
     public string Status { get; set; } = AccountStatus.ACTIVE;
@@ -31,6 +31,10 @@ public sealed class Account : Entity
         {
             throw new ArgumentException("Amount must be positive.", nameof(amount));
         }
+        if (Status is not AccountStatus.ACTIVE)
+        {
+            throw new InvalidOperationException("Cannot debit funds from a non-active account.");
+        }
         if (Balance < amount)
         {
             throw new InvalidOperationException("Insufficient funds.");
@@ -43,6 +47,10 @@ public sealed class Account : Entity
         if (amount <= 0)
         {
             throw new ArgumentException("Amount must be positive.", nameof(amount));
+        }
+        if (Status is not AccountStatus.ACTIVE)
+        {
+            throw new InvalidOperationException("Cannot deposit funds into a non-active account.");
         }
         Balance += amount;
     }

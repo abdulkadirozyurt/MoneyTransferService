@@ -12,7 +12,8 @@ public class AccountService(
     IUnitOfWork unitOfWork,
     IAccountRepository accountRepository,
     IIndividualCustomerRepository individualCustomerRepository,
-    ICorporateCustomerRepository corporateCustomerRepository) : IAccountService
+    ICorporateCustomerRepository corporateCustomerRepository,
+    IIbanGenerator ibanGenerator) : IAccountService
 {
     public async Task<Account> CreateAccountAsync(
         Guid? individualCustomerId,
@@ -30,7 +31,7 @@ public class AccountService(
 
         var account = new Account
         {
-            AccountNumber = GenerateAccountNumber(),
+            Iban = ibanGenerator.GenerateIban(),
             CurrencyCode = currencyCode.Trim().ToUpperInvariant(),
             Balance = initialBalance,
             Status = AccountStatus.ACTIVE,
@@ -90,10 +91,5 @@ public class AccountService(
         }
 
         return await corporateCustomerRepository.GetByIdAsync(corporateCustomerId!.Value, cancellationToken) is not null;
-    }
-
-    private static string GenerateAccountNumber()
-    {
-        return $"ACC{Guid.CreateVersion7():N}"[..34];
-    }
+    }    
 }

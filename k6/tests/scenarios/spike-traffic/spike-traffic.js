@@ -9,6 +9,7 @@ import {
   deriveJsonReportPath,
   buildReportMetadata,
   assertSafeLoadTarget,
+  fixtureIban,
 } from "../../../lib/seed-helper.js";
 
 const status200 = new Counter("status_200");
@@ -52,9 +53,17 @@ const SENDER_ACCOUNT_IDS = Array.from(
   { length: 100 },
   (_, index) => `22000000-0000-7000-8000-${String(index + 1).padStart(12, "0")}`
 );
+const SENDER_IBANS = Array.from(
+  { length: 100 },
+  (_, index) => fixtureIban("40", index + 1)
+);
 const RECEIVER_ACCOUNT_IDS = Array.from(
   { length: 100 },
   (_, index) => `22000000-0000-7000-8000-${String(index + 101).padStart(12, "0")}`
+);
+const RECEIVER_IBANS = Array.from(
+  { length: 100 },
+  (_, index) => fixtureIban("40", index + 101)
 );
 
 assertSafeLoadTarget(BASE_URL);
@@ -69,8 +78,8 @@ export function setup() {
   verifyAccounts(BASE_URL, [...SENDER_ACCOUNT_IDS, ...RECEIVER_ACCOUNT_IDS], SCENARIO_NAME);
 
   return {
-    senders: SENDER_ACCOUNT_IDS.map((id) => ({ id })),
-    receivers: RECEIVER_ACCOUNT_IDS.map((id) => ({ id })),
+    senders: SENDER_ACCOUNT_IDS.map((id, index) => ({ id, iban: SENDER_IBANS[index] })),
+    receivers: RECEIVER_ACCOUNT_IDS.map((id, index) => ({ id, iban: RECEIVER_IBANS[index] })),
   };
 }
 
@@ -78,8 +87,8 @@ export default function (data) {
   const sender = data.senders[(__VU - 1) % data.senders.length];
   const receiver = data.receivers[(__ITER + __VU - 1) % data.receivers.length];
   const payload = JSON.stringify({
-    senderAccountId: sender.id,
-    receiverAccountId: receiver.id,
+    senderIban: sender.iban,
+    receiverIban: receiver.iban,
     amount: 1,
     currencyCode: CURRENCY_CODE,
     description: "Spike traffic scenario transfer",

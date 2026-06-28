@@ -1,13 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using MoneyTransferService.Business.Abstract;
 using MoneyTransferService.Business.BusinessRules;
 using MoneyTransferService.Business.Concrete;
 using MoneyTransferService.Business.Exceptions;
@@ -17,7 +11,6 @@ using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Core.DataAccess.Abstract;
 using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
-using Xunit;
 
 namespace MoneyTransferService.Business.Tests.Concrete;
 
@@ -186,7 +179,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -232,7 +225,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = inactiveStatus
@@ -241,7 +234,7 @@ public class TransferServiceTests
         var receiverAccount = new Account
         {
             Id = receiverAccountId,
-            AccountNumber = "ACC-RECEIVER",
+            Iban = "ACC-RECEIVER",
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
@@ -285,7 +278,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD", // Account currency mismatched
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -294,7 +287,7 @@ public class TransferServiceTests
         var receiverAccount = new Account
         {
             Id = receiverAccountId,
-            AccountNumber = "ACC-RECEIVER",
+            Iban = "ACC-RECEIVER",
             CurrencyCode = "EUR",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
@@ -338,7 +331,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -347,7 +340,7 @@ public class TransferServiceTests
         var receiverAccount = new Account
         {
             Id = receiverAccountId,
-            AccountNumber = "ACC-RECEIVER",
+            Iban = "ACC-RECEIVER",
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
@@ -396,7 +389,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -405,7 +398,7 @@ public class TransferServiceTests
         var receiverAccount = new Account
         {
             Id = receiverAccountId,
-            AccountNumber = "ACC-RECEIVER",
+            Iban = "ACC-RECEIVER",
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE
@@ -477,7 +470,7 @@ public class TransferServiceTests
         var senderAccount = new Account
         {
             Id = senderAccountId,
-            AccountNumber = "ACC-SENDER",
+            Iban = "ACC-SENDER",
             CurrencyCode = "USD",
             Balance = 1000m,
             Status = AccountStatus.ACTIVE
@@ -486,7 +479,7 @@ public class TransferServiceTests
         var receiverAccount = new Account
         {
             Id = receiverAccountId,
-            AccountNumber = "ACC-RECEIVER",
+            Iban = "ACC-RECEIVER",
             CurrencyCode = "USD",
             Balance = 500m,
             Status = AccountStatus.ACTIVE

@@ -4,7 +4,7 @@ namespace MoneyTransferService.Business.Abstract;
 
 public interface ITransferBusinessRules
 {
-    Account EnsureAccountExists(Account? account, string accountRole, Guid accountId);
+    Account EnsureAccountExists(Account? account, string accountRole, string iban);
 
     void EnsureAccountIsActive(Account account, string accountRole);
 

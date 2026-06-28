@@ -23,8 +23,8 @@ public static class TransactionEndpoints
         CancellationToken cancellationToken)
     {
         var command = new TransferCommand(
-            request.SenderAccountId,
-            request.ReceiverAccountId,
+            request.SenderIban,
+            request.ReceiverIban,
             request.Amount,
             request.CurrencyCode,
             request.IdempotencyKey,

@@ -9,6 +9,7 @@ import {
   buildReportMetadata,
   assertSafeLoadTarget,
   verifyAccounts,
+  fixtureIban,
 } from "../../../lib/seed-helper.js";
 
 const status200 = new Counter("status_200");
@@ -48,12 +49,14 @@ const TEST_DOC = open("./README.md");
 // Same hot sender/receiver pair as the original script to preserve contention intent.
 const senderAccountId = "33333333-3333-7333-8333-333333333333";
 const receiverAccountId = "44444444-4444-7444-8444-444444444444";
+const senderIban = fixtureIban("30", 1);
+const receiverIban = fixtureIban("30", 2);
 
 assertSafeLoadTarget(BASE_URL);
 
 export function setup() {
   verifyAccounts(BASE_URL, [senderAccountId, receiverAccountId], SCENARIO_NAME);
-  return { senderAccountId, receiverAccountId };
+  return { senderAccountId, receiverAccountId, senderIban, receiverIban };
 }
 
 // Small local helper: read a Rate metric as a formatted percentage.
@@ -64,8 +67,8 @@ function rateOf(summary, name) {
 
 export default function (data) {
   const payload = JSON.stringify({
-    senderAccountId: data.senderAccountId,
-    receiverAccountId: data.receiverAccountId,
+    senderIban: data.senderIban,
+    receiverIban: data.receiverIban,
     amount: 1,
     currencyCode: "TRY",
     description: "Performance test transfer",
