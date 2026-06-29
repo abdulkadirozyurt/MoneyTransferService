@@ -14,7 +14,23 @@ namespace MoneyTransferService.Business.Concrete.Infrastructure;
 /// </summary>
 public sealed class ConcurrencyRetryExecutor(ITransactionAuditRepository auditRepository)
 {
-    private const int MaxRetryAttempts = 3;
+    private const int MaxAttempts = 3;
+
+    /// <summary>
+    /// Defines the retry policy for handling optimistic concurrency exceptions.
+    /// </summary>
+    private static readonly ResiliencePipeline<Transaction> RetryPipeline =
+        new ResiliencePipelineBuilder<Transaction>()
+            .AddRetry(new RetryStrategyOptions<Transaction>
+            {
+                MaxRetryAttempts = MaxAttempts - 1,
+                ShouldHandle = new PredicateBuilder<Transaction>()
+                    .Handle<DbUpdateConcurrencyException>(),
+                Delay = TimeSpan.FromMilliseconds(100),
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true // Adds randomness to the delay to reduce contention. Add random delay offset.
+            })
+            .Build();
 
     /// <summary>
     /// Executes the given operation with retry logic for optimistic concurrency conflicts.
@@ -30,18 +46,9 @@ public sealed class ConcurrencyRetryExecutor(ITransactionAuditRepository auditRe
         Func<CancellationToken, Task<Transaction?>> findExistingTransaction,
         CancellationToken cancellationToken = default)
     {
-        var pipeline = new ResiliencePipelineBuilder<Transaction>()
-                                .AddRetry(new RetryStrategyOptions<Transaction>
-                                {
-                                    MaxRetryAttempts = MaxRetryAttempts - 1,
-                                    ShouldHandle = new PredicateBuilder<Transaction>()
-                                                        .Handle<DbUpdateConcurrencyException>()
-
-                                })
-                                .Build();
         try
         {
-            return await pipeline.ExecuteAsync(async token => await operation(token), cancellationToken);
+            return await RetryPipeline.ExecuteAsync(async token => await operation(token), cancellationToken);
         }
         catch (DbUpdateConcurrencyException exception)
         {

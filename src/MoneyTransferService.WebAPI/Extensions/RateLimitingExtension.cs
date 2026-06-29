@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MoneyTransferService.WebAPI.Constants;
 using MoneyTransferService.WebAPI.Diagnostics;
 
@@ -10,21 +11,17 @@ public static class RateLimitingExtension
 {
     public static IServiceCollection AddRateLimitingConfiguration(this IServiceCollection services)
     {
+        // Applies one shared rate limit to all /api endpoints.
         services.AddRateLimiter(options =>
         {
-            // Applies one shared rate limit to all /api endpoints.
-            options.AddPolicy(RateLimitingPolicies.API, _ =>
-                RateLimitPartition.GetSlidingWindowLimiter(RateLimitingPolicies.API, _ => new SlidingWindowRateLimiterOptions
-                {                   // !!!!!!!!!!!!!
-
-                
-                    // Allows 1000 requests per minute, evaluated with 10-second sliding segments.
-                    PermitLimit = 1000,
-                    Window = TimeSpan.FromMinutes(1),
-                    SegmentsPerWindow = 6,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 0
-                }));
+            options.AddSlidingWindowLimiter("slidingWindowPolicy", config =>
+            {
+                config.PermitLimit = 1000;
+                config.Window = TimeSpan.FromMinutes(1);
+                config.SegmentsPerWindow = 6;
+                config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                config.QueueLimit = 0;
+            });           
 
             options.OnRejected = async (context, cancellationToken) =>
             {
@@ -58,12 +55,11 @@ public static class RateLimitingExtension
                     problemDetails.Extensions.Add("correlationId", correlationId);
 
                 await httpContext.Response.WriteAsJsonAsync(
-                    problemDetails, 
-                    JsonSerializerOptions.Web, 
-                    contentType: "application/problem+json", 
+                    problemDetails,
+                    JsonSerializerOptions.Web,
+                    contentType: "application/problem+json",
                     cancellationToken);
             };
-
         });
 
         return services;

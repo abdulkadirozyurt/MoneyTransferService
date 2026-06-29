@@ -1,20 +1,18 @@
+using Moq;
 using FluentAssertions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Moq;
-using MoneyTransferService.Business.Abstract;
-using MoneyTransferService.Business.Concrete.BusinessRules;
-using MoneyTransferService.Business.Concrete;
-using MoneyTransferService.Business.Concrete.Handlers;
-using MoneyTransferService.Business.Concrete.Infrastructure;
-using MoneyTransferService.Business.Models;
-using MoneyTransferService.Business.Exceptions;
-using MoneyTransferService.Business.Requests;
-using MoneyTransferService.Business.Validators;
 using MoneyTransferService.Core.Constants;
-using MoneyTransferService.Core.DataAccess.Abstract;
-using MoneyTransferService.DataAccess.Abstract;
+using MoneyTransferService.Business.Requests;
 using MoneyTransferService.Entities.Concrete;
+using MoneyTransferService.Business.Exceptions;
+using MoneyTransferService.Business.Validators;
+using MoneyTransferService.DataAccess.Abstract;
+using MoneyTransferService.Core.DataAccess.Abstract;
+using MoneyTransferService.Business.Concrete.Handlers;
+using MoneyTransferService.Business.Concrete.BusinessRules;
+using MoneyTransferService.Business.Concrete.Infrastructure;
+using MoneyTransferService.Business.Abstract.Services;
 
 namespace MoneyTransferService.Business.Tests.Concrete;
 
@@ -24,6 +22,7 @@ public class TransferServiceTests
     private readonly Mock<IAccountRepository> _accountRepositoryMock;
     private readonly Mock<ITransactionRepository> _transferRepositoryMock;
     private readonly Mock<ITransactionAuditRepository> _auditRepositoryMock;
+    private readonly Mock<IAccountLockService> _accountLockServiceMock;
     private readonly TransferHandler _transferHandler;
 
     private const string SenderIban = "TR000000000000000000000001";
@@ -35,10 +34,21 @@ public class TransferServiceTests
         _accountRepositoryMock = new Mock<IAccountRepository>();
         _transferRepositoryMock = new Mock<ITransactionRepository>();
         _auditRepositoryMock = new Mock<ITransactionAuditRepository>();
+        _accountLockServiceMock = new Mock<IAccountLockService>();
+
+        _accountLockServiceMock.
+                Setup(s => s.ExecuteWithAccountLocksAsync(
+                    It.IsAny<IReadOnlyCollection<string>>(),
+                    It.IsAny<Func<Task<Transaction>>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns<IReadOnlyCollection<string>, Func<Task<Transaction>>, CancellationToken>(
+                    (_, operation, __) => operation()
+                );
+
+
 
         var transactionFactory = new TransactionFactory();
-        var retryExecutor = new ConcurrencyRetryExecutor(
-            _auditRepositoryMock.Object);
+        var retryExecutor = new ConcurrencyRetryExecutor(_auditRepositoryMock.Object);
 
         _transferHandler = new TransferHandler(
             _unitOfWorkMock.Object,
@@ -47,8 +57,10 @@ public class TransferServiceTests
             new TransferCommandValidator(),
             new TransferBusinessRules(),
             _auditRepositoryMock.Object,
+            _accountLockServiceMock.Object,
             transactionFactory,
-            retryExecutor);
+            retryExecutor
+        );
     }
 
     [Theory]
@@ -468,9 +480,15 @@ public class TransferServiceTests
 
         // Assert
         await act.Should().ThrowAsync<ConcurrencyException>();
+
         _auditRepositoryMock.Verify(a => a.LogTransferAsync(
             It.Is<Transaction>(t => t.IdempotencyKey == "key-concurrency"),
             AuditEventType.FAILED,
             It.IsAny<string>()), Times.Once);
+
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(3)
+        );
     }
 }

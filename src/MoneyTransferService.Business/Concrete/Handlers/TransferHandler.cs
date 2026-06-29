@@ -22,7 +22,7 @@ public sealed class TransferHandler(
     IUnitOfWork unitOfWork,
     ITransactionRepository transactionRepository,
     IAccountRepository accountRepository,
-    IValidator<TransferCommand> transferRequestValidator,
+    IValidator<TransferCommand> transferCommandValidator,
     ITransferBusinessRules transferBusinessRules,
     ITransactionAuditRepository auditRepository,
     IAccountLockService accountLockService,
@@ -156,7 +156,7 @@ public sealed class TransferHandler(
 
     private async Task ValidateRequestAsync(TransferCommand request, CancellationToken cancellationToken)
     {
-        var validationResult = await transferRequestValidator.ValidateAsync(request, cancellationToken);
+        var validationResult = await transferCommandValidator.ValidateAsync(request, cancellationToken);
         if (!validationResult.IsValid)
         {
             throw new ValidationException("Invalid transfer request.", validationResult.Errors);
