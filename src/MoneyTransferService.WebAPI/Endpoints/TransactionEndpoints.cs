@@ -84,10 +84,12 @@ public static class TransactionEndpoints
     }
 
     private static async Task<IResult> GetTransactionHistoryAsync(
+        int pageNumber,
+        int pageSize,
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
-        var transactions = await transactionService.GetTransactionHistoryAsync(cancellationToken);
+        var transactions = await transactionService.GetTransactionHistoryAsync(pageNumber, pageSize, cancellationToken);
         return Results.Ok(transactions.Select(TransactionResponse.FromTransaction));
     }
 }

@@ -28,9 +28,8 @@ public class TransactionService(
     public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => await transactionRepository.GetByIdAsync(id, cancellationToken);
 
-    public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
-        var transactions = await transactionRepository.GetAllAsync(cancellationToken);
-        return transactions.OrderByDescending(t => t.CreatedAt);
+        return await transactionRepository.GetHistoryAsync(pageNumber, pageSize, cancellationToken);
     }
 }

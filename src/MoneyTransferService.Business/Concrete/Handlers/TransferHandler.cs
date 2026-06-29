@@ -35,15 +35,15 @@ public sealed class TransferHandler(
 
         return await accountLockService.ExecuteWithAccountLocksAsync(
             [request.SenderIban, request.ReceiverIban],
-            () => retryExecutor.ExecuteWithRetryAsync(
-            operation: ct => ExecuteTransferAttemptAsync(request, ct),
-            createFailedTransaction: reason => transactionFactory.CreateFailedTransaction(new CreateFailedTransactionParameters(
-                TransactionTypes.TRANSFER,
-                request.IdempotencyKey,
-                request.Amount,
-                request.CurrencyCode,
-                reason)),
-            findExistingTransaction: ct => GetExistingTransactionAsync(request.IdempotencyKey, ct),
+            operation: () => retryExecutor.ExecuteWithRetryAsync(
+                operation: ct => ExecuteTransferAttemptAsync(request, ct),
+                createFailedTransaction: reason => transactionFactory.CreateFailedTransaction(new CreateFailedTransactionParameters(
+                    TransactionTypes.TRANSFER,
+                    request.IdempotencyKey,
+                    request.Amount,
+                    request.CurrencyCode,
+                    reason)),
+                findExistingTransaction: ct => GetExistingTransactionAsync(request.IdempotencyKey, ct),
             cancellationToken),
         cancellationToken);
     }

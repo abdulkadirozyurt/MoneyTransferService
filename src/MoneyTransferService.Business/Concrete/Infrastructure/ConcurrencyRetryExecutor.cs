@@ -3,6 +3,8 @@ using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.Constants;
 using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
+using Polly;
+using Polly.Retry;
 
 namespace MoneyTransferService.Business.Concrete.Infrastructure;
 
@@ -28,49 +30,46 @@ public sealed class ConcurrencyRetryExecutor(ITransactionAuditRepository auditRe
         Func<CancellationToken, Task<Transaction?>> findExistingTransaction,
         CancellationToken cancellationToken = default)
     {
-        for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
+        var pipeline = new ResiliencePipelineBuilder<Transaction>()
+                                .AddRetry(new RetryStrategyOptions<Transaction>
+                                {
+                                    MaxRetryAttempts = MaxRetryAttempts - 1,
+                                    ShouldHandle = new PredicateBuilder<Transaction>()
+                                                        .Handle<DbUpdateConcurrencyException>()
+
+                                })
+                                .Build();
+        try
         {
-            try
-            {
-                return await operation(cancellationToken);
-            }
-            catch (DbUpdateConcurrencyException) when (attempt < MaxRetryAttempts)
-            {
-                continue; // Retry the operation
-            }
-            catch (DbUpdateConcurrencyException exception)
-            {
-                var failedTransaction = createFailedTransaction(
+            return await pipeline.ExecuteAsync(async token => await operation(token), cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            var failedTransaction = createFailedTransaction(
                     "Optimistic concurrency version conflict during transaction.");
 
-                await auditRepository.LogTransferAsync(
-                    failedTransaction,
-                    AuditEventType.FAILED,
-                    failedTransaction.FailureReason);
+            await auditRepository.LogTransferAsync(
+                failedTransaction,
+                AuditEventType.FAILED,
+                failedTransaction.FailureReason);
 
-                throw new ConcurrencyException(failedTransaction.FailureReason!, exception);
-            }
-            catch (DbUpdateException exception)
-            {
-                // Another request may have committed the same idempotency key first.
-                var existingTransaction = await findExistingTransaction(cancellationToken);
-                if (existingTransaction != null)
-                {
-                    return existingTransaction;
-                }
-
-                var failedTransaction = createFailedTransaction(
-                    "Transaction could not be completed.");
-
-                await auditRepository.LogTransferAsync(
-                    failedTransaction,
-                    AuditEventType.FAILED,
-                    failedTransaction.FailureReason);
-
-                throw new TransferPersistenceException(failedTransaction.FailureReason!, exception);
-            }
+            throw new ConcurrencyException(failedTransaction.FailureReason!, exception);
         }
+        catch (DbUpdateException exception)
+        {
+            var existingTransaction = await findExistingTransaction(cancellationToken);
+            if (existingTransaction != null)
+                return existingTransaction;
 
-        throw new InvalidOperationException("Max concurrency retry attempts exceeded.");
+            var failedTransaction = createFailedTransaction(
+                "Transaction could not be completed.");
+
+            await auditRepository.LogTransferAsync(
+                failedTransaction,
+                AuditEventType.FAILED,
+                failedTransaction.FailureReason);
+
+            throw new TransferPersistenceException(failedTransaction.FailureReason!, exception);
+        }
     }
 }

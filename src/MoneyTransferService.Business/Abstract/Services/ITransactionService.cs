@@ -13,5 +13,5 @@ public interface ITransactionService
 
     Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<Transaction>> GetTransactionHistoryAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }

@@ -36,6 +36,8 @@ public sealed class AccountLockService : IAccountLockService
                                 _ => new SemaphoreSlim(1, 1));
 
                 // Wait asynchronously to acquire the semaphore, allowing other threads to continue executing while waiting.
+                // semaphore is a "protected code block" that ensures that only one thread can access the account at a time, 
+                // preventing race conditions and ensuring data integrity.
                 await semaphore.WaitAsync(cancellationToken);
 
                 // Keep track of the acquired locks to ensure they can be released later.
