@@ -9,6 +9,7 @@ using MoneyTransferService.Core.Constants;
 using MoneyTransferService.Core.DataAccess.Abstract;
 using MoneyTransferService.DataAccess.Abstract;
 using MoneyTransferService.Entities.Concrete;
+using MoneyTransferService.Business.Abstract.Services;
 
 namespace MoneyTransferService.Business.Concrete.Handlers;
 
@@ -24,6 +25,7 @@ public sealed class TransferHandler(
     IValidator<TransferCommand> transferRequestValidator,
     ITransferBusinessRules transferBusinessRules,
     ITransactionAuditRepository auditRepository,
+    IAccountLockService accountLockService,
     TransactionFactory transactionFactory,
     ConcurrencyRetryExecutor retryExecutor) : ITransferHandler
 {
@@ -31,7 +33,9 @@ public sealed class TransferHandler(
     {
         await ValidateRequestAsync(request, cancellationToken);
 
-        return await retryExecutor.ExecuteWithRetryAsync(
+        return await accountLockService.ExecuteWithAccountLocksAsync(
+            [request.SenderIban, request.ReceiverIban],
+            () => retryExecutor.ExecuteWithRetryAsync(
             operation: ct => ExecuteTransferAttemptAsync(request, ct),
             createFailedTransaction: reason => transactionFactory.CreateFailedTransaction(new CreateFailedTransactionParameters(
                 TransactionTypes.TRANSFER,
@@ -40,7 +44,8 @@ public sealed class TransferHandler(
                 request.CurrencyCode,
                 reason)),
             findExistingTransaction: ct => GetExistingTransactionAsync(request.IdempotencyKey, ct),
-            cancellationToken);
+            cancellationToken),
+        cancellationToken);
     }
 
     private async Task<Transaction> ExecuteTransferAttemptAsync(TransferCommand request, CancellationToken cancellationToken)

@@ -158,19 +158,17 @@ namespace MoneyTransferService.DataAccess.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("ReceiverAccountId")
+                    b.Property<Guid?>("ReceiverAccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReceiverIban")
-                        .IsRequired()
                         .HasMaxLength(34)
                         .HasColumnType("nvarchar(34)");
 
-                    b.Property<Guid>("SenderAccountId")
+                    b.Property<Guid?>("SenderAccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SenderIban")
-                        .IsRequired()
                         .HasMaxLength(34)
                         .HasColumnType("nvarchar(34)");
 
@@ -178,6 +176,13 @@ namespace MoneyTransferService.DataAccess.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("TRANSFER");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -268,14 +273,12 @@ namespace MoneyTransferService.DataAccess.Migrations
                     b.HasOne("MoneyTransferService.Entities.Concrete.Account", "ReceiverAccount")
                         .WithMany("IncomingTransfers")
                         .HasForeignKey("ReceiverAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MoneyTransferService.Entities.Concrete.Account", "SenderAccount")
                         .WithMany("OutgoingTransfers")
                         .HasForeignKey("SenderAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ReceiverAccount");
 

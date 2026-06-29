@@ -21,6 +21,7 @@ public static class BusinessServiceRegistration
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ITransactionService, TransactionService>();
+        services.AddSingleton<IAccountLockService, AccountLockService>();
 
         // Business rules
         services.AddScoped<ITransferBusinessRules, TransferBusinessRules>();
