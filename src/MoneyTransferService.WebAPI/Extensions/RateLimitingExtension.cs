@@ -14,7 +14,7 @@ public static class RateLimitingExtension
         // Applies one shared rate limit to all /api endpoints.
         services.AddRateLimiter(options =>
         {
-            options.AddSlidingWindowLimiter("slidingWindowPolicy", config =>
+            options.AddSlidingWindowLimiter(RateLimitingPolicies.PUBLIC_API, config =>
             {
                 config.PermitLimit = 1000;
                 config.Window = TimeSpan.FromMinutes(1);

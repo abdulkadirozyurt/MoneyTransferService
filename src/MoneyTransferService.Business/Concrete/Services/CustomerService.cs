@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MoneyTransferService.Business.Abstract.Services;
 using MoneyTransferService.Business.Exceptions;
 using MoneyTransferService.Core.DataAccess.Abstract;
@@ -9,9 +10,16 @@ namespace MoneyTransferService.Business.Concrete.Services;
 
 public class CustomerService(
     IUnitOfWork unitOfWork,
+    IMemoryCache memoryCache,
     IIndividualCustomerRepository individualCustomerRepository,
     ICorporateCustomerRepository corporateCustomerRepository) : ICustomerService
 {
+
+    private const string IndividualCustomersCacheKey = "customers:individual:all";
+    private const string CorporateCustomersCacheKey = "customers:corporate:all";
+
+
+
     public async Task<IndividualCustomer> CreateIndividualCustomerAsync(
         string email,
         string phoneNumber,
@@ -37,6 +45,7 @@ public class CustomerService(
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            memoryCache.Remove(IndividualCustomersCacheKey); // Invalidate the cache after adding a new customer
         }
         catch (DbUpdateException ex)
         {
@@ -71,6 +80,7 @@ public class CustomerService(
         try
         {
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            memoryCache.Remove(CorporateCustomersCacheKey); // Invalidate the cache after adding a new customer
         }
         catch (DbUpdateException ex)
         {
@@ -87,10 +97,24 @@ public class CustomerService(
         => await corporateCustomerRepository.GetByIdAsync(id, cancellationToken);
 
     public async Task<IEnumerable<IndividualCustomer>> GetIndividualCustomersAsync(CancellationToken cancellationToken = default)
-        => await individualCustomerRepository.GetAllAsync(cancellationToken);
+    {
+        return await memoryCache.GetOrCreateAsync(IndividualCustomersCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60); // Cache for 60 seconds
+            return await individualCustomerRepository.GetAllAsync(cancellationToken);
+        }) ?? [];
+    }   
 
     public async Task<IEnumerable<CorporateCustomer>> GetCorporateCustomersAsync(CancellationToken cancellationToken = default)
-        => await corporateCustomerRepository.GetAllAsync(cancellationToken);
+    {
+        // if there is no cache specified the given "key", 
+        // this method runs and creates a cache entry with the given "key" and the value returned by the provided factory function.
+        return await memoryCache.GetOrCreateAsync(CorporateCustomersCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60); // Cache for 60 seconds
+            return await corporateCustomerRepository.GetAllAsync(cancellationToken);
+        }) ?? [];
+    }
 
     private static void ValidateCommonFields(string email, string phoneNumber)
     {

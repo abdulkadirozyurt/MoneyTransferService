@@ -23,6 +23,7 @@ try
 
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>().AddProblemDetails();
+    builder.Services.AddMemoryCache();
     builder.Services.RegisterDataAccessServices(builder.Configuration);
     builder.Services.RegisterBusinessServices(builder.Configuration);
     builder.Services.AddOpenApi(options =>
@@ -59,7 +60,7 @@ try
     app.UseHttpsRedirection();
 
     var api = app.MapGroup("/api")
-        .RequireRateLimiting(RateLimitingPolicies.API);
+        .RequireRateLimiting(RateLimitingPolicies.PUBLIC_API);
 
     api.MapAccountEndpoints();
     api.MapCustomerEndpoints();
